@@ -1,0 +1,40 @@
+export const authCopy = {
+  actions: {
+    login: 'Iniciar sesión',
+    register: 'Crear cuenta',
+    logout: 'Cerrar sesión',
+    retry: 'Reintentar',
+  },
+  links: {
+    toRegister: '¿No tienes cuenta? Regístrate',
+    toLogin: '¿Ya tienes cuenta? Inicia sesión',
+  },
+  labels: {
+    name: 'Nombre',
+    email: 'Correo electrónico',
+    password: 'Contraseña',
+    confirmPassword: 'Confirmar contraseña',
+    showPassword: 'Mostrar contraseña',
+    hidePassword: 'Ocultar contraseña',
+  },
+  titles: {
+    login: 'Iniciar sesión',
+    register: 'Crear cuenta',
+    userHome: 'Inicio',
+    adminHome: 'Panel de administración',
+  },
+  errors: {
+    required: 'Este campo es obligatorio',
+    emailInvalid: 'Ingresa un correo electrónico válido',
+    emailTooShort: 'El correo debe tener al menos 5 caracteres',
+    emailTooLong: 'El correo no puede superar los 150 caracteres',
+    nameTooShort: 'El nombre debe tener al menos 3 caracteres',
+    nameTooLong: 'El nombre no puede superar los 150 caracteres',
+    passwordLength: 'La contraseña debe tener entre 8 y 20 caracteres',
+    passwordMismatch: 'Las contraseñas no coinciden',
+    emailTaken: 'Ese correo ya está registrado',
+    loginGeneric: 'El correo o la contraseña son incorrectos',
+    accountInactive: 'Tu cuenta no permite iniciar sesión',
+    serverError: 'Ocurrió un error. Intenta nuevamente.',
+  },
+} as const

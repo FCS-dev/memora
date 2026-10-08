@@ -3,24 +3,39 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
-- Spec 001 (backend inicial) implementada al 100% (T1-T9 marcadas).
-- Backend Spring Boot 4.1.1 con Java 21, Maven, endpoint `/health`, configuración por variables de entorno y validación de env vars.
-- PostgreSQL 16 levantado mediante Docker Compose; base de datos creada y accesible.
-- Test suite del backend: 6 tests, todos en verde; `mvn package -DskipTests` y `mvn spring-boot:run` verifican `GET /health` 200 `{"status":"ok"}`.
+- Spec 001 (backend inicial) implementada al 100%.
+- Spec 002 (autenticación, autorización y entidades) implementada al 100%: T1-T13 marcadas en `specs/002-auth-admin-tablas/tasks.md`.
+- Backend Spring Boot 4.1.1 con Java 21; endpoints de auth, users, admin, notes y tags operativos.
+- Suite de tests del backend: 96 tests, todos en verde; `mvn package -DskipTests` exitoso.
+- Spec 003 (frontend login/registro) implementada al 100%: T1-T10 marcadas en `specs/003-login-register/tasks.md`.
+- Frontend React 19 + Vite 8 + Tailwind 4/DaisyUI 5 en `frontend/`; 61 tests Vitest en verde, lint y build OK.
+- E2E verificado contra backend real: registro+auto-login, guards de rol, persistencia, logout, errores de login y responsive 320–1280.
 
-## Decisiones (y por qué)
-- Java 21 gestionado por SDKMAN (`21.0.12+1.1-tem`); Java 17 (`17.0.20-tem`) permanece como default global.
-- `.sdkmanrc` en la raíz del proyecto fija Java 21; `sdkman_auto_env=true` lo activa al entrar a la carpeta.
-- Carga manual de `.env` mediante `source .env` antes de ejecutar Maven o la aplicación; Spring no carga `.env` automáticamente.
-- `application.yaml` usa placeholders sin valores por defecto para DB_URL, DB_USERNAME, DB_PASSWORD y SERVER_PORT, forzando fallo si faltan.
-- Validación explícita de variables requeridas en `Application.main` para mostrar un mensaje claro antes de que Spring falle por binding.
-- Spring Boot 4.1.1 requiere `spring-boot-webmvc-test` y `@MockitoBean` en `@WebMvcTest`; `@MockBean` fue eliminado.
+## Decisiones vigentes
+- Java 21 vía SDKMAN (`.sdkmanrc`); `.env` se carga manualmente con `source .env` antes de Maven/app.
+- `application.yaml` sin valores por defecto para DB_URL, DB_USERNAME, DB_PASSWORD y SERVER_PORT.
+- Spring Boot 4.1.1 usa `spring-boot-webmvc-test` y `@MockitoBean`; `@MockBean` eliminado.
+- `@DataJpaTest` no disponible; tests de repositorio usan `@SpringBootTest` + `@Transactional`.
+- `AdminBootstrap` lleva `@Profile("!test")` para no requerir credenciales admin en tests.
+- `User.uuidUser` usa longitud 36 para UUID con guiones.
+- Refresh token incluye `jti` UUID para evitar duplicados por unique constraint.
+- `GlobalExceptionHandler` mapea `UsernameNotFoundException` a 404.
+- ADMIN no accede a notas/tags; `/notes/**` y `/tags/**` restringidos a USER.
+- OpenAPI/SpringDoc expone `/v3/api-docs` y `/swagger-ui/index.html`.
+- Spec 003: validación FE contraseña 8–20, nombre/email 150; auto-login encadenado registro+login; sesión hasta logout o 30 días de inactividad; mensaje específico para BLOCKED/DISABLED.
+- Plan 003: React Router + access token en memoria (refresh por cookie HttpOnly), proxy Vite `/api`→`:8080`, `fetch` nativo, Context para sesión, tests con Vitest + Testing Library; refresh *single-flight* por pestaña.
+- Tailwind 4 + DaisyUI 5 con `@tailwindcss/vite` (CSS-first) en lugar de Tailwind 3/postcss (desvío justificado: versión vigente y sin vulnerabilidades dev).
+- Longitudes alineadas (backend 002/003 + frontend): name 3–150, email 5–150, password 8–20 (hash 256), title 1–200, content 0–2500, tag 1–25.
+- `Note.contentJson` es `jsonb` (`@JdbcTypeCode(SqlTypes.JSON)`); validación personalizada `@ValidChecklist` (null si checklistMode=false; con checklist: al menos 1 key no vacía y suma de longitudes de keys ≤ 2500).
 
-## Aprendizajes y errores a evitar
-- `@WebMvcTest` necesita una clase `@SpringBootConfiguration` (p. ej. `Application`) para detectar el contexto.
-- Sin variables de entorno exportadas, el contexto de Spring falla al resolver `${SERVER_PORT}` como entero.
-- Evitar dejar procesos de `mvn spring-boot:run` en background sin control de grupo de procesos; usar `kill -- -$PGID`.
+## Aprendizajes recientes
+- Los tests de controller con filtros de seguridad requieren usuarios reales o tokens válidos; preferir `@AutoConfigureMockMvc(addFilters = false)` solo cuando no se pruebe seguridad.
+- `/swagger-ui.html` redirige (302) a `/swagger-ui/index.html`; usar el índice para testear 200.
+- En tests, `new ObjectMapper()` evita depender del bean configurado de Spring.
 
 ## Próximos pasos
-- [x] Implementar T1-T9 de `specs/001-backend-init`.
-- [ ] Definir y aprobar `specs/002-*.md` (autenticación JWT o dominio de notas/eventos).
+- [x] Implementar Spec 001.
+- [x] Aprobar e implementar Spec 002.
+- [x] Implementar Spec 003 por tareas (T1-T10).
+- [x] Revisar y alinear longitudes de campos (backend, Spec 002/003 y frontend).
+- [ ] Definir specs de la Fase 2 (documentos, RAG, MCP/LLM).

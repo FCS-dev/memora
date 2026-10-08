@@ -17,6 +17,11 @@ spring:
 server:
   port: ${SERVER_PORT}
 
+jwt:
+  secret: ${JWT_SECRET}
+  access-ttl: ${JWT_ACCESS_TTL:900000}
+  refresh-ttl: ${JWT_REFRESH_TTL:2592000000}
+
 logging:
   level:
     root: INFO
