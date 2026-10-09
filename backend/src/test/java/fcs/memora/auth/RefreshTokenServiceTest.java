@@ -35,7 +35,6 @@ class RefreshTokenServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build());
 
         RefreshToken token = refreshTokenService.createRefreshToken(user);
@@ -58,7 +57,6 @@ class RefreshTokenServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build());
 
         refreshTokenService.createRefreshToken(user);

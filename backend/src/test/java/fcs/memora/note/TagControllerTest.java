@@ -50,7 +50,6 @@ class TagControllerTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         userRepository.save(user);
         return jwtService.generateAccessToken(user);

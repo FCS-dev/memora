@@ -56,7 +56,6 @@ public class AdminBootstrap implements CommandLineRunner {
             .passwordHash(passwordService.hashPassword(adminPassword))
             .role(UserRole.ADMIN)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         userRepository.save(admin);

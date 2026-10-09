@@ -80,7 +80,6 @@ class AuthServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         RefreshToken refreshToken = RefreshToken.builder()
             .token("refreshTokenValue")
@@ -112,7 +111,6 @@ class AuthServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
@@ -131,7 +129,6 @@ class AuthServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.BLOCKED)
-            .lastNotePosition(0L)
             .build();
 
         when(userRepository.findByEmail("blocked@example.com")).thenReturn(Optional.of(user));
@@ -148,7 +145,6 @@ class AuthServiceTest {
             .email("user@example.com")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         RefreshToken oldToken = RefreshToken.builder().token("oldToken").user(user).revoked(false).build();
         RefreshToken newToken = RefreshToken.builder().token("newToken").user(user).revoked(false).build();
@@ -172,7 +168,6 @@ class AuthServiceTest {
             .email("user@example.com")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         RefreshToken token = RefreshToken.builder().token("token").user(user).build();
 

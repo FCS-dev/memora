@@ -32,7 +32,6 @@ class JwtServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build());
 
         String token = jwtService.generateAccessToken(user);

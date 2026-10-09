@@ -3,8 +3,10 @@ package fcs.memora.note;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.NoteResponse;
+import fcs.memora.note.dto.ReorderNoteRequest;
 import fcs.memora.note.dto.UpdateNoteRequest;
 import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
@@ -18,12 +20,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class NoteService {
 
-    private static final long POSITION_INCREMENT = 100_000L;
+    private static final long STEP = 100_000L;
+    private static final int UUID_MAX_ATTEMPTS = 5;
 
     private final NoteRepository noteRepository;
     private final TagRepository tagRepository;
@@ -39,23 +43,27 @@ public class NoteService {
 
     @Transactional
     public NoteResponse create(String uuidUser, CreateNoteRequest request) {
+        if (request.isArchived()) {
+            throw new IllegalArgumentException("No se puede crear una nota archivada");
+        }
+
         User user = findActiveUser(uuidUser);
         Set<Tag> tags = resolveTags(user, request.tagIds());
 
-        long newPosition = user.getLastNotePosition() + POSITION_INCREMENT;
-        user.setLastNotePosition(newPosition);
-        userRepository.save(user);
+        boolean pinned = request.isPinned();
+        long maxPosition = noteRepository.maxPosition(user, pinned, false).orElse(0L);
 
         Note note = Note.builder()
+            .uuidNote(generateUniqueUuid())
             .user(user)
             .title(request.title())
             .content(request.checklistMode() ? "" : request.content())
             .contentJson(request.checklistMode() ? toJson(request.checklistItems()) : null)
             .checklistMode(request.checklistMode())
             .rememberAt(request.rememberAt())
-            .isPinned(request.isPinned())
-            .isArchived(request.isArchived())
-            .position(newPosition)
+            .isPinned(pinned)
+            .isArchived(false)
+            .position(maxPosition + STEP)
             .tags(tags)
             .build();
 
@@ -65,20 +73,30 @@ public class NoteService {
     @Transactional(readOnly = true)
     public List<NoteResponse> list(String uuidUser) {
         User user = findActiveUser(uuidUser);
-        return noteRepository.findByUserOrderByPositionDesc(user).stream()
+        return noteRepository.findByUserAndIsArchivedFalseOrderByIsPinnedDescPositionDescIdDesc(user).stream()
             .map(this::toResponse)
             .toList();
     }
 
     @Transactional(readOnly = true)
-    public NoteResponse getById(String uuidUser, Long id) {
-        return toResponse(findUserNote(uuidUser, id));
+    public List<NoteResponse> listArchived(String uuidUser) {
+        User user = findActiveUser(uuidUser);
+        return noteRepository.findByUserAndIsArchivedTrueOrderByCreatedAtDescIdDesc(user).stream()
+            .map(this::toResponse)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public NoteResponse getByUuid(String uuidUser, String uuidNote) {
+        User user = findActiveUser(uuidUser);
+        return toResponse(findUserNote(user, uuidNote));
     }
 
     @Transactional
-    public NoteResponse update(String uuidUser, Long id, UpdateNoteRequest request) {
-        Note note = findUserNote(uuidUser, id);
-        Set<Tag> tags = resolveTags(note.getUser(), request.tagIds());
+    public NoteResponse update(String uuidUser, String uuidNote, UpdateNoteRequest request) {
+        User user = findActiveUser(uuidUser);
+        Note note = findUserNote(user, uuidNote);
+        Set<Tag> tags = resolveTags(user, request.tagIds());
 
         note.setTitle(request.title());
         if (request.checklistMode()) {
@@ -90,17 +108,90 @@ public class NoteService {
         }
         note.setChecklistMode(request.checklistMode());
         note.setRememberAt(request.rememberAt());
-        note.setPinned(request.isPinned());
-        note.setArchived(request.isArchived());
         note.setTags(tags);
+
+        if (request.isPinned() != null && (note.isArchived() || note.isPinned() != request.isPinned())) {
+            boolean pinned = request.isPinned();
+            long maxPosition = noteRepository.maxPosition(user, pinned, false).orElse(0L);
+            note.setArchived(false);
+            note.setPinned(pinned);
+            note.setPosition(maxPosition + STEP);
+        }
 
         return toResponse(noteRepository.save(note));
     }
 
     @Transactional
-    public void delete(String uuidUser, Long id) {
-        Note note = findUserNote(uuidUser, id);
-        noteRepository.delete(note);
+    public NoteResponse reorder(String uuidUser, String uuidNote, ReorderNoteRequest request) {
+        User user = findActiveUser(uuidUser);
+        Note note = findUserNote(user, uuidNote);
+
+        NoteGroup group = NoteGroup.resolve(note.isPinned(), note.isArchived());
+        if (group == NoteGroup.ARCHIVED) {
+            throw new IllegalArgumentException("No se pueden reordenar notas archivadas");
+        }
+
+        Note before = resolveNeighbor(user, request.beforeUuid());
+        Note after = resolveNeighbor(user, request.afterUuid());
+
+        validateNeighbor(before, note, group);
+        validateNeighbor(after, note, group);
+        if (before != null && after != null && before.getId().equals(after.getId())) {
+            throw new IllegalArgumentException("Las vecinas anterior y siguiente no pueden ser la misma nota");
+        }
+
+        List<Note> groupNotes = noteRepository
+            .findByUserAndIsPinnedAndIsArchivedOrderByPositionDescIdDesc(user, note.isPinned(), false);
+        groupNotes.removeIf(candidate -> candidate.getId().equals(note.getId()));
+
+        Long upper = before != null ? before.getPosition() : null;
+        Long lower = after != null ? after.getPosition() : null;
+        long candidate = NotePositioner.resolvePosition(upper, lower, STEP);
+
+        if (NotePositioner.needsRebalance(candidate, upper, lower)) {
+            List<Long> positions = NotePositioner.rebalancedPositions(groupNotes.size(), STEP);
+            for (int i = 0; i < groupNotes.size(); i++) {
+                groupNotes.get(i).setPosition(positions.get(i));
+            }
+            noteRepository.saveAll(groupNotes);
+            upper = before != null ? before.getPosition() : null;
+            lower = after != null ? after.getPosition() : null;
+            candidate = NotePositioner.resolvePosition(upper, lower, STEP);
+        }
+
+        note.setPosition(candidate);
+        return toResponse(noteRepository.save(note));
+    }
+
+    @Transactional
+    public NoteResponse changeGroup(String uuidUser, String uuidNote, ChangeNoteGroupRequest request) {
+        User user = findActiveUser(uuidUser);
+        Note note = findUserNote(user, uuidNote);
+
+        NoteGroup current = NoteGroup.resolve(note.isPinned(), note.isArchived());
+        NoteGroup target = request.group();
+        if (target == current) {
+            throw new IllegalArgumentException("La nota ya pertenece al grupo destino");
+        }
+
+        if (target == NoteGroup.ARCHIVED) {
+            note.setArchived(true);
+            note.setPinned(false);
+        } else {
+            boolean pinned = target == NoteGroup.PINNED;
+            long maxPosition = noteRepository.maxPosition(user, pinned, false).orElse(0L);
+            note.setArchived(false);
+            note.setPinned(pinned);
+            note.setPosition(maxPosition + STEP);
+        }
+
+        return toResponse(noteRepository.save(note));
+    }
+
+    @Transactional
+    public void delete(String uuidUser, String uuidNote) {
+        User user = findActiveUser(uuidUser);
+        noteRepository.delete(findUserNote(user, uuidNote));
     }
 
     private User findActiveUser(String uuidUser) {
@@ -112,10 +203,45 @@ public class NoteService {
         return user;
     }
 
-    private Note findUserNote(String uuidUser, Long id) {
-        User user = findActiveUser(uuidUser);
-        return noteRepository.findByIdAndUser(id, user)
+    private Note findUserNote(User user, String uuidNote) {
+        if (!NotePositioner.isValidUuid(uuidNote)) {
+            throw new IllegalArgumentException("Identificador de nota inválido");
+        }
+        return noteRepository.findByUuidNoteAndUser(uuidNote, user)
             .orElseThrow(() -> new UsernameNotFoundException("Nota no encontrada"));
+    }
+
+    private Note resolveNeighbor(User user, String uuid) {
+        if (uuid == null || uuid.isBlank()) {
+            return null;
+        }
+        if (!NotePositioner.isValidUuid(uuid)) {
+            throw new IllegalArgumentException("Identificador de vecina inválido");
+        }
+        return noteRepository.findByUuidNoteAndUser(uuid, user)
+            .orElseThrow(() -> new UsernameNotFoundException("Nota no encontrada"));
+    }
+
+    private void validateNeighbor(Note neighbor, Note note, NoteGroup group) {
+        if (neighbor == null) {
+            return;
+        }
+        if (neighbor.getId().equals(note.getId())) {
+            throw new IllegalArgumentException("La vecina no puede ser la propia nota");
+        }
+        if (NoteGroup.resolve(neighbor.isPinned(), neighbor.isArchived()) != group) {
+            throw new IllegalArgumentException("La vecina no pertenece al grupo de la nota");
+        }
+    }
+
+    private String generateUniqueUuid() {
+        for (int attempt = 0; attempt < UUID_MAX_ATTEMPTS; attempt++) {
+            String uuid = UUID.randomUUID().toString();
+            if (!noteRepository.existsByUuidNote(uuid)) {
+                return uuid;
+            }
+        }
+        throw new IllegalStateException("No se pudo generar un identificador único");
     }
 
     private Set<Tag> resolveTags(User user, Set<Long> tagIds) {
@@ -153,7 +279,7 @@ public class NoteService {
 
     private NoteResponse toResponse(Note note) {
         return new NoteResponse(
-            note.getId(),
+            note.getUuidNote(),
             note.getTitle(),
             note.getContent(),
             note.isChecklistMode(),
@@ -161,7 +287,6 @@ public class NoteService {
             note.getRememberAt(),
             note.isPinned(),
             note.isArchived(),
-            note.getPosition(),
             note.getTags().stream().map(Tag::getTagName).collect(Collectors.toSet()),
             note.getCreatedAt(),
             note.getUpdatedAt()

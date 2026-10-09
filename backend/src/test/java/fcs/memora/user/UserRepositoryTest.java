@@ -27,7 +27,6 @@ class UserRepositoryTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         User saved = userRepository.save(user);
@@ -39,7 +38,6 @@ class UserRepositoryTest {
         assertThat(found.get().getName()).isEqualTo("Test User");
         assertThat(found.get().getRole()).isEqualTo(UserRole.USER);
         assertThat(found.get().getUserStatus()).isEqualTo(UserStatus.ACTIVE);
-        assertThat(found.get().getLastNotePosition()).isEqualTo(0L);
         assertThat(found.get().getCreatedAt()).isNotNull();
         assertThat(found.get().getUpdatedAt()).isNotNull();
     }
@@ -53,7 +51,6 @@ class UserRepositoryTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         userRepository.save(user);
@@ -72,7 +69,6 @@ class UserRepositoryTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         userRepository.save(user);
@@ -91,7 +87,6 @@ class UserRepositoryTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         userRepository.save(user);
@@ -109,7 +104,6 @@ class UserRepositoryTest {
             .passwordHash("hashedPassword")
             .role(UserRole.ADMIN)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         User regular = User.builder()
@@ -119,7 +113,6 @@ class UserRepositoryTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         userRepository.save(admin);

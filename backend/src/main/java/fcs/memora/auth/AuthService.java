@@ -50,7 +50,6 @@ public class AuthService {
             .passwordHash(passwordService.hashPassword(request.password()))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         return userRepository.save(user);

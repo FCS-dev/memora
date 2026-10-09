@@ -2,6 +2,7 @@ package fcs.memora.note;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -10,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fcs.memora.auth.JwtService;
 import fcs.memora.auth.PasswordService;
+import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.CreateNoteRequest;
+import fcs.memora.note.dto.ReorderNoteRequest;
 import fcs.memora.note.dto.UpdateNoteRequest;
 import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
@@ -27,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -52,17 +56,7 @@ class NoteControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private String createUserToken() {
-        User user = User.builder()
-            .uuidUser("user-uuid")
-            .email("user@example.com")
-            .name("User")
-            .passwordHash(passwordService.hashPassword("password123"))
-            .role(UserRole.USER)
-            .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
-            .build();
-        userRepository.save(user);
-        return jwtService.generateAccessToken(user);
+        return jwtService.generateAccessToken(createUser());
     }
 
     private User createUser() {
@@ -73,23 +67,33 @@ class NoteControllerTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         return userRepository.save(user);
+    }
+
+    private String createNote(String token, String title, boolean pinned) throws Exception {
+        CreateNoteRequest request = new CreateNoteRequest(title, "Content", false, null, null, pinned, false, null);
+        String response = mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response).get("uuidNote").asText();
     }
 
     @Test
     void shouldCreateNote() throws Exception {
         String token = createUserToken();
-        CreateNoteRequest request = new CreateNoteRequest("Title", "Content", false, null, null, false, false, null);
 
         mockMvc.perform(post("/notes")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                .content(objectMapper.writeValueAsString(
+                    new CreateNoteRequest("Title", "Content", false, null, null, false, false, null))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.title").value("Title"))
-            .andExpect(jsonPath("$.position").value(100000));
+            .andExpect(jsonPath("$.uuidNote").isNotEmpty())
+            .andExpect(jsonPath("$.position").doesNotExist());
     }
 
     @Test
@@ -108,17 +112,23 @@ class NoteControllerTest {
     }
 
     @Test
-    void shouldListNotes() throws Exception {
+    void shouldRejectArchivedCreation() throws Exception {
         String token = createUserToken();
-        CreateNoteRequest request = new CreateNoteRequest("Title", "Content", false, null, null, false, false, null);
+        CreateNoteRequest request = new CreateNoteRequest("Title", "c", false, null, null, false, true, null);
 
         mockMvc.perform(post("/notes")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)));
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+    }
 
-        mockMvc.perform(get("/notes")
-                .header("Authorization", "Bearer " + token))
+    @Test
+    void shouldListNotes() throws Exception {
+        String token = createUserToken();
+        createNote(token, "Title", false);
+
+        mockMvc.perform(get("/notes").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].title").value("Title"));
     }
@@ -143,17 +153,11 @@ class NoteControllerTest {
     @Test
     void shouldUpdateNote() throws Exception {
         String token = createUserToken();
-        CreateNoteRequest createRequest = new CreateNoteRequest("Title", "Content", false, null, null, false, false, null);
-        String response = mockMvc.perform(post("/notes")
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createRequest)))
-            .andReturn().getResponse().getContentAsString();
-        Long noteId = objectMapper.readTree(response).get("id").asLong();
+        String uuid = createNote(token, "Title", false);
 
-        UpdateNoteRequest updateRequest = new UpdateNoteRequest("Updated", "Updated content", false, null, null, true, false, null);
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest("Updated", "Updated content", false, null, null, true, null);
 
-        mockMvc.perform(put("/notes/" + noteId)
+        mockMvc.perform(put("/notes/" + uuid)
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)))
@@ -165,16 +169,76 @@ class NoteControllerTest {
     @Test
     void shouldDeleteNote() throws Exception {
         String token = createUserToken();
-        CreateNoteRequest createRequest = new CreateNoteRequest("Title", "Content", false, null, null, false, false, null);
-        String response = mockMvc.perform(post("/notes")
+        String uuid = createNote(token, "Title", false);
+
+        mockMvc.perform(delete("/notes/" + uuid).header("Authorization", "Bearer " + token))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void shouldReorderNote() throws Exception {
+        String token = createUserToken();
+        String first = createNote(token, "First", false);
+        String second = createNote(token, "Second", false);
+
+        ReorderNoteRequest request = new ReorderNoteRequest(null, first);
+
+        mockMvc.perform(patch("/notes/" + second + "/position")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createRequest)))
-            .andReturn().getResponse().getContentAsString();
-        Long noteId = objectMapper.readTree(response).get("id").asLong();
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.uuidNote").value(second));
 
-        mockMvc.perform(delete("/notes/" + noteId)
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isNoContent());
+        mockMvc.perform(get("/notes").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].uuidNote").value(second))
+            .andExpect(jsonPath("$[1].uuidNote").value(first));
+    }
+
+    @Test
+    void shouldChangeGroupToPinned() throws Exception {
+        String token = createUserToken();
+        String uuid = createNote(token, "Note", false);
+
+        mockMvc.perform(patch("/notes/" + uuid + "/group")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new ChangeNoteGroupRequest(NoteGroup.PINNED))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.isPinned").value(true));
+    }
+
+    @Test
+    void shouldListArchivedNotes() throws Exception {
+        String token = createUserToken();
+        String uuid = createNote(token, "Archived", false);
+
+        mockMvc.perform(patch("/notes/" + uuid + "/group")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new ChangeNoteGroupRequest(NoteGroup.ARCHIVED))))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/notes/archived").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].uuidNote").value(uuid))
+            .andExpect(jsonPath("$[0].isArchived").value(true));
+    }
+
+    @Test
+    void shouldRejectMalformedUuid() throws Exception {
+        String token = createUserToken();
+
+        mockMvc.perform(get("/notes/not-a-uuid").header("Authorization", "Bearer " + token))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnNotFoundForUnknownUuid() throws Exception {
+        String token = createUserToken();
+
+        mockMvc.perform(get("/notes/" + UUID.randomUUID()).header("Authorization", "Bearer " + token))
+            .andExpect(status().isNotFound());
     }
 }

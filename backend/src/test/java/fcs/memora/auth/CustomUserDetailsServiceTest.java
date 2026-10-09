@@ -36,7 +36,6 @@ class CustomUserDetailsServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
 
         when(userRepository.findByUuidUser("uuiduuiduuiduuiduuiduuiduuiduuid")).thenReturn(Optional.of(user));

@@ -47,7 +47,6 @@ class AdminControllerTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.ADMIN)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         userRepository.save(admin);
         return jwtService.generateAccessToken(admin);
@@ -61,7 +60,6 @@ class AdminControllerTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         userRepository.save(user);
         return jwtService.generateAccessToken(user);
@@ -77,7 +75,6 @@ class AdminControllerTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build();
         userRepository.save(target);
 

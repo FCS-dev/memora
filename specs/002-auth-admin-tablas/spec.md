@@ -33,7 +33,6 @@ El proyecto necesita proteger el acceso, distinguir entre el administrador únic
 - **ACTIVE:** estado normal de una cuenta; permite iniciar sesión.
 - **BLOCKED:** estado impuesto por el ADMIN; impide iniciar sesión y debe devolver HTTP 403.
 - **DISABLED:** estado impuesto por el ADMIN; impide iniciar sesión y debe devolver HTTP 403.
-- **lastNotePosition:** contador interno de cada usuario que se usa para asignar la posición de una nueva nota.
 
 ## Requisitos funcionales
 
@@ -51,12 +50,12 @@ El proyecto necesita proteger el acceso, distinguir entre el administrador únic
 - RF-12: EL SISTEMA debe garantizar que solo pueda existir un único usuario con rol ADMIN en todo momento.
 - RF-13: EL SISTEMA debe permitir que el ADMIN cambie el estado `userStatus` de cualquier usuario entre ACTIVE, BLOCKED y DISABLED, excepto el propio ADMIN.
 - RF-14: EL SISTEMA debe almacenar notas asociadas a un único usuario, exigiendo un título obligatorio que no esté vacío ni compuesto únicamente por espacios.
-- RF-15: CUANDO se cree una nota, EL SISTEMA debe calcular su posición como `user.lastNotePosition + 100000`, asignar ese valor a la nota y actualizar `user.lastNotePosition` con el mismo valor. El valor inicial de `lastNotePosition` para un usuario recién registrado será `0`.
+- RF-15: El identificador público y el orden de las notas se rigen por la Spec 004 (identificador público y orden manual por grupo); el contador global `lastNotePosition` queda derogado.
 - RF-16: CUANDO una nota tenga activado el modo de casillas de verificación (`checklistMode = true`), EL SISTEMA debe almacenar el contenido de texto como cadena vacía (`""`) y persistir el listado como pares `{text: string, checked: boolean}` en `contentJson`, almacenado como `jsonb` y con al menos un ítem cuya clave tenga longitud mayor o igual a 1 y suma de longitudes de claves de hasta 2500 caracteres.
 - RF-17: EL SISTEMA debe permitir asociar múltiples tags a una misma nota.
 - RF-18: EL SISTEMA debe almacenar tags asociados a un único usuario y garantizar que el nombre de tag sea único dentro de cada usuario, comparando en minúsculas y sin espacios externos.
 - RF-19: EL SISTEMA debe registrar automáticamente las fechas de creación y modificación de usuarios, notas y tags.
-- RF-20: EL SISTEMA debe generar automáticamente un identificador visible único para cada usuario, con formato UUID v4 sin guiones (32 caracteres hexadecimales).
+- RF-20: EL SISTEMA debe generar automáticamente un identificador visible único para cada usuario, con formato UUID v4 con guiones (36 caracteres).
 - RF-21: EL SISTEMA debe asignar rol USER y estado ACTIVE por defecto a los nuevos usuarios.
 - RF-22: CUANDO un visitante se registre enviando un rol distinto a USER, EL SISTEMA debe ignorar dicho rol y crear el usuario con rol USER.
 - RF-23: EL SISTEMA debe impedir que el ADMIN modifique su propio estado.
@@ -136,7 +135,7 @@ El proyecto necesita proteger el acceso, distinguir entre el administrador únic
 - [ ] El ADMIN puede cambiar el estado de cualquier usuario entre ACTIVE, BLOCKED y DISABLED, excepto el propio ADMIN.
 - [ ] Al cambiar el estado de un usuario a BLOCKED o DISABLED se revocan sus tokens activos.
 - [ ] Las entidades de usuario, nota y tag persisten con los campos, relaciones y restricciones definidos.
-- [ ] Una nota nueva recibe una posición igual a `user.lastNotePosition + 100000` y `user.lastNotePosition` se actualiza con ese mismo valor; el valor inicial es `0`.
+- [ ] El identificador público y el orden de las notas se rigen por la Spec 004.
 - [ ] Una nota con casillas de verificación almacena el contenido de texto como cadena vacía y el listado como pares `{text, checked}` en `contentJson` (`jsonb`), nulo sin checklist y validado por cantidad y suma de claves cuando hay checklist.
 - [ ] El nombre de tag es único dentro de cada usuario, comparando en minúsculas y sin espacios externos.
 - [ ] Una nota puede tener `rememberAt`, `isPinned` e `isArchived` con los valores por defecto definidos.

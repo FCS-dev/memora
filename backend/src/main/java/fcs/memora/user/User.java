@@ -45,9 +45,6 @@ public class User {
     @Column(nullable = false, length = 20)
     private UserRole role;
 
-    @Column(name = "last_note_position", nullable = false)
-    private Long lastNotePosition;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "user_status", nullable = false, length = 20)
     private UserStatus userStatus;
@@ -62,9 +59,6 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (lastNotePosition == null) {
-            lastNotePosition = 0L;
-        }
         if (role == null) {
             role = UserRole.USER;
         }

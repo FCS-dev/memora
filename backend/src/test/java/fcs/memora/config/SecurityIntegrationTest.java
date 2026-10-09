@@ -21,6 +21,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -61,7 +63,6 @@ class SecurityIntegrationTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build());
         String token = jwtService.generateAccessToken(user);
 
@@ -79,7 +80,6 @@ class SecurityIntegrationTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build());
         String token = jwtService.generateAccessToken(user);
 
@@ -97,9 +97,9 @@ class SecurityIntegrationTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build());
         Note note = noteRepository.save(Note.builder()
+            .uuidNote(UUID.randomUUID().toString())
             .user(owner)
             .title("Private")
             .content("Content")
@@ -113,11 +113,10 @@ class SecurityIntegrationTest {
             .passwordHash(passwordService.hashPassword("password123"))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
-            .lastNotePosition(0L)
             .build());
         String token = jwtService.generateAccessToken(other);
 
-        mockMvc.perform(get("/notes/" + note.getId())
+        mockMvc.perform(get("/notes/" + note.getUuidNote())
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isNotFound());
     }

@@ -1,7 +1,9 @@
 package fcs.memora.note;
 
+import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.NoteResponse;
+import fcs.memora.note.dto.ReorderNoteRequest;
 import fcs.memora.note.dto.UpdateNoteRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,34 +45,58 @@ public class NoteController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar notas del usuario")
+    @Operation(summary = "Listar notas no archivadas del usuario")
     public ResponseEntity<List<NoteResponse>> list(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(noteService.list(userDetails.getUsername()));
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Obtener una nota por ID")
-    public ResponseEntity<NoteResponse> getById(
-        @AuthenticationPrincipal UserDetails userDetails,
-        @PathVariable Long id) {
-        return ResponseEntity.ok(noteService.getById(userDetails.getUsername(), id));
+    @GetMapping("/archived")
+    @Operation(summary = "Listar notas archivadas del usuario")
+    public ResponseEntity<List<NoteResponse>> listArchived(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(noteService.listArchived(userDetails.getUsername()));
     }
 
-    @PutMapping("/{id}")
+    @GetMapping("/{uuidNote}")
+    @Operation(summary = "Obtener una nota por su identificador público")
+    public ResponseEntity<NoteResponse> getByUuid(
+        @AuthenticationPrincipal UserDetails userDetails,
+        @PathVariable String uuidNote) {
+        return ResponseEntity.ok(noteService.getByUuid(userDetails.getUsername(), uuidNote));
+    }
+
+    @PutMapping("/{uuidNote}")
     @Operation(summary = "Actualizar una nota")
     public ResponseEntity<NoteResponse> update(
         @AuthenticationPrincipal UserDetails userDetails,
-        @PathVariable Long id,
+        @PathVariable String uuidNote,
         @Valid @RequestBody UpdateNoteRequest request) {
-        return ResponseEntity.ok(noteService.update(userDetails.getUsername(), id, request));
+        return ResponseEntity.ok(noteService.update(userDetails.getUsername(), uuidNote, request));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{uuidNote}")
     @Operation(summary = "Eliminar una nota")
     public ResponseEntity<Void> delete(
         @AuthenticationPrincipal UserDetails userDetails,
-        @PathVariable Long id) {
-        noteService.delete(userDetails.getUsername(), id);
+        @PathVariable String uuidNote) {
+        noteService.delete(userDetails.getUsername(), uuidNote);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{uuidNote}/position")
+    @Operation(summary = "Reordenar una nota dentro de su grupo")
+    public ResponseEntity<NoteResponse> reorder(
+        @AuthenticationPrincipal UserDetails userDetails,
+        @PathVariable String uuidNote,
+        @RequestBody ReorderNoteRequest request) {
+        return ResponseEntity.ok(noteService.reorder(userDetails.getUsername(), uuidNote, request));
+    }
+
+    @PatchMapping("/{uuidNote}/group")
+    @Operation(summary = "Cambiar una nota de grupo")
+    public ResponseEntity<NoteResponse> changeGroup(
+        @AuthenticationPrincipal UserDetails userDetails,
+        @PathVariable String uuidNote,
+        @Valid @RequestBody ChangeNoteGroupRequest request) {
+        return ResponseEntity.ok(noteService.changeGroup(userDetails.getUsername(), uuidNote, request));
     }
 }

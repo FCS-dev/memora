@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 public record NoteResponse(
-    Long id,
+    String uuidNote,
     String title,
     String content,
     boolean checklistMode,
@@ -13,7 +13,6 @@ public record NoteResponse(
     LocalDateTime rememberAt,
     boolean isPinned,
     boolean isArchived,
-    Long position,
     Set<String> tags,
     LocalDateTime createdAt,
     LocalDateTime updatedAt

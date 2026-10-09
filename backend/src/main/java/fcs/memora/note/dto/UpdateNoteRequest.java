@@ -17,8 +17,7 @@ public record UpdateNoteRequest(
     @NotNull boolean checklistMode,
     Map<String, Boolean> checklistItems,
     LocalDateTime rememberAt,
-    @NotNull boolean isPinned,
-    @NotNull boolean isArchived,
+    Boolean isPinned,
     Set<Long> tagIds
 ) implements ChecklistPayload {
 }
