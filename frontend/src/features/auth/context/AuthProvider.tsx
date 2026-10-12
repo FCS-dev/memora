@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import * as authApi from '../api/authApi'
-import { NetworkError, setAccessToken, setRefreshHandler } from '../../../shared/lib/http'
+import { NetworkError, setAccessToken, setRefreshHandler, setUnauthorizedHandler } from '../../../shared/lib/http'
 import { AuthContext } from './authContext'
 import type { AuthUser, LoginCredentials, SessionStatus } from '../model/types'
 
@@ -13,8 +13,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setRefreshHandler(() => authApi.refresh())
+    setUnauthorizedHandler(() => {
+      setAccessToken(null)
+      setUser(null)
+      setStatus('anonymous')
+    })
     return () => {
       setRefreshHandler(null)
+      setUnauthorizedHandler(null)
     }
   }, [])
 

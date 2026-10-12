@@ -2,6 +2,7 @@ package fcs.memora.config;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +14,8 @@ import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
 import fcs.memora.user.UserRole;
 import fcs.memora.user.UserStatus;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +24,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.UUID;
 
 @SpringBootTest
@@ -44,14 +49,46 @@ class SecurityIntegrationTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private JwtProperties jwtProperties;
+
     @Test
     void shouldRejectProtectedEndpointsWithoutToken() throws Exception {
         mockMvc.perform(get("/users/me"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.detail").isNotEmpty());
         mockMvc.perform(get("/notes"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401));
         mockMvc.perform(get("/tags"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.detail").isNotEmpty());
+    }
+
+    @Test
+    void shouldReturn401ForMalformedToken() throws Exception {
+        mockMvc.perform(get("/notes")
+                .header("Authorization", "Bearer not-a-real-token"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.detail").isNotEmpty());
+    }
+
+    @Test
+    void shouldReturn401ForExpiredToken() throws Exception {
+        String expiredToken = Jwts.builder()
+            .subject("uuiduuiduuiduuiduuiduuiduuiduuid")
+            .issuedAt(new Date(System.currentTimeMillis() - 3_600_000))
+            .expiration(new Date(System.currentTimeMillis() - 60_000))
+            .signWith(Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8)))
+            .compact();
+
+        mockMvc.perform(get("/notes")
+                .header("Authorization", "Bearer " + expiredToken))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.detail").isNotEmpty());
     }
 
     @Test
@@ -68,7 +105,9 @@ class SecurityIntegrationTest {
 
         mockMvc.perform(get("/admin/users/other-uuid/status")
                 .header("Authorization", "Bearer " + token))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.status").value(403))
+            .andExpect(jsonPath("$.detail").isNotEmpty());
     }
 
     @Test

@@ -4,7 +4,7 @@ import { authCopy } from '../features/auth/model/copy'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { AdminHomePage } from '../features/home/pages/AdminHomePage'
-import { UserHomePage } from '../features/home/pages/UserHomePage'
+import { NotesPage } from '../features/notes/pages/NotesPage'
 import { ErrorAlert } from '../shared/components/ErrorAlert'
 import { Spinner } from '../shared/components/Spinner'
 import { PublicOnly } from './guards/PublicOnly'
@@ -71,7 +71,27 @@ export function App() {
         element={
           <RequireAuth>
             <RequireRole role="USER">
-              <UserHomePage />
+              <NotesPage mode="list" />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/home/new"
+        element={
+          <RequireAuth>
+            <RequireRole role="USER">
+              <NotesPage mode="new" />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/home/:uuid"
+        element={
+          <RequireAuth>
+            <RequireRole role="USER">
+              <NotesPage mode="edit" />
             </RequireRole>
           </RequireAuth>
         }

@@ -29,6 +29,7 @@ const API_BASE_PATH = '/api'
 
 let accessToken: string | null = null
 let refreshHandler: RefreshHandler | null = null
+let unauthorizedHandler: (() => void) | null = null
 let refreshPromise: Promise<string> | null = null
 
 export function setAccessToken(token: string | null): void {
@@ -37,6 +38,14 @@ export function setAccessToken(token: string | null): void {
 
 export function setRefreshHandler(handler: RefreshHandler | null): void {
   refreshHandler = handler
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler
+}
+
+function notifyUnauthorized(): void {
+  unauthorizedHandler?.()
 }
 
 function runRefresh(): Promise<string> {
@@ -87,10 +96,19 @@ async function execute(path: string, options: RequestOptions): Promise<Response>
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response = await execute(path, options)
 
-  if (response.status === 401 && options.auth && refreshHandler) {
-    const freshToken = await runRefresh()
-    setAccessToken(freshToken)
-    response = await execute(path, options)
+  if (response.status === 401 && options.auth) {
+    if (refreshHandler) {
+      try {
+        const freshToken = await runRefresh()
+        setAccessToken(freshToken)
+        response = await execute(path, options)
+      } catch {
+        notifyUnauthorized()
+        throw new HttpError(401, await parseBody(response))
+      }
+    } else {
+      notifyUnauthorized()
+    }
   }
 
   const body = await parseBody(response)

@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { HttpError, NetworkError, request, setAccessToken, setRefreshHandler } from './http'
+import {
+  HttpError,
+  NetworkError,
+  request,
+  setAccessToken,
+  setRefreshHandler,
+  setUnauthorizedHandler,
+} from './http'
 
 function fakeResponse(status: number, body: unknown): Response {
   return {
@@ -13,6 +20,7 @@ describe('http', () => {
   beforeEach(() => {
     setAccessToken(null)
     setRefreshHandler(null)
+    setUnauthorizedHandler(null)
   })
 
   afterEach(() => {
@@ -77,5 +85,34 @@ describe('http', () => {
 
     await expect(request('/auth/login', { method: 'POST' })).rejects.toBeInstanceOf(HttpError)
     expect(refreshCalls).toBe(0)
+  })
+
+  it('avisa al manejador de sesión cuando el refresh falla en 401', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    setRefreshHandler(async () => {
+      throw new HttpError(401, null)
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(401, { detail: 'expirado' })))
+    setAccessToken('token-1')
+
+    await expect(request('/notes', { auth: true })).rejects.toMatchObject({ status: 401 })
+    expect(onUnauthorized).toHaveBeenCalledOnce()
+  })
+
+  it('no marca 403 como sesión expirada ni refresca', async () => {
+    let refreshCalls = 0
+    setRefreshHandler(async () => {
+      refreshCalls += 1
+      return 'token-2'
+    })
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(403, null)))
+    setAccessToken('token-1')
+
+    await expect(request('/notes', { auth: true })).rejects.toMatchObject({ status: 403 })
+    expect(refreshCalls).toBe(0)
+    expect(onUnauthorized).not.toHaveBeenCalled()
   })
 })

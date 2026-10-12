@@ -64,6 +64,10 @@ El proyecto necesita proteger el acceso, distinguir entre el administrador únic
 - RF-26: CUANDO se cree o actualice una nota, EL SISTEMA debe permitir opcionalmente una fecha y hora de recordatorio (`rememberAt`).
 - RF-27: EL SISTEMA debe permitir marcar una nota como fijada (`isPinned`), con valor por defecto `false`.
 - RF-28: EL SISTEMA debe permitir archivar una nota (`isArchived`), con valor por defecto `false`.
+- RF-29: SI una petición a un recurso protegido no presenta un access token válido (ausente, malformado o expirado), ENTONCES EL SISTEMA debe responder HTTP 401 con el cuerpo de error estándar `{title, status, detail}` (no 403 ni cuerpo vacío).
+- RF-30: SI una petición autenticada accede a un recurso para el que no tiene permiso, ENTONCES EL SISTEMA debe responder HTTP 403 con el cuerpo de error estándar `{title, status, detail}`.
+- RF-31: CUANDO el usuario marque o desmarque un ítem de una nota en modo checklist, EL SISTEMA debe exponer una operación idempotente que fije el valor booleano de ese ítem en `contentJson` sin alterar los demás ítems, la posición ni el grupo; la operación solo aplica a notas propias y en modo checklist (404 si la nota no existe o es ajena, o si el ítem no pertenece a la checklist; 400 si la nota no es checklist).
+- RF-32: CUANDO cualquier operación modifique una nota (título/contenido/checklist, posición, grupo o etiquetas), EL SISTEMA debe refrescar `updatedAt` en la persistencia y devolver el valor actualizado en la respuesta de esa operación (sin requerir una recarga posterior).
 - RF-REF-1: EL SISTEMA debe aplicar las siguientes reglas de validación y valores por defecto:
   - Email: obligatorio, mínimo 5, máximo 150 caracteres.
   - Nombre de usuario (`name`): obligatorio, mínimo 3, máximo 150 caracteres.
@@ -95,6 +99,12 @@ El proyecto necesita proteger el acceso, distinguir entre el administrador únic
 - Un usuario con estado BLOCKED intenta iniciar sesión.
 - Un usuario con estado DISABLED intenta iniciar sesión.
 - El refresh token está expirado, ausente o no coincide con el almacenado.
+- Una petición a un recurso protegido sin access token, con token malformado o con token expirado (401 con cuerpo de error).
+- Un usuario autenticado (p. ej. ADMIN) accede a un recurso para el que no tiene rol (403 con cuerpo de error).
+- Se marca un ítem de una checklist propia: cambia solo ese `true/false`; marcarlo dos veces con el mismo valor no produce cambios adicionales.
+- Se intenta marcar un ítem de una nota ajena, inexistente o que no está en la checklist.
+- Se intenta marcar un ítem de una nota que no está en modo checklist.
+- Se modifica cualquier aspecto de una nota: `updatedAt` se refresca y la respuesta de la operación trae el valor nuevo. (RF-32)
 - Un usuario intenta crear un tag con un nombre que el mismo usuario ya tiene (incluyendo variaciones de mayúsculas o espacios externos).
 - Una nota se crea con el modo de casillas activado pero sin ninguna línea.
 - Una nota se crea con modo de casillas y una suma de longitudes de claves superior a 2500.
@@ -128,6 +138,9 @@ El proyecto necesita proteger el acceso, distinguir entre el administrador únic
 - [ ] El login emite access token JWT y refresh token en cookie `HttpOnly` de 30 días.
 - [ ] El login rechaza credenciales inválidas con HTTP 401 sin revelar detalles.
 - [ ] El login rechaza usuarios BLOCKED y DISABLED con HTTP 403.
+- [ ] Una petición sin token válido a un recurso protegido responde 401 con cuerpo de error estándar; sin permiso, 403 con cuerpo de error estándar.
+- [ ] Marcar/desmarcar un ítem de una checklist propia actualiza solo ese booleano en `contentJson` de forma idempotente; notas ajenas/inexistentes/ítem ausente responden 404 y nota no-checklist 400.
+- [ ] Toda modificación de una nota refresca `updatedAt` y la respuesta de la operación devuelve el valor actualizado. (RF-32)
 - [ ] La renovación de access token funciona con un refresh token válido.
 - [ ] Un USER puede modificar únicamente su propio nombre y contraseña.
 - [ ] Al cambiar la contraseña se revocan todos los refresh tokens del usuario.

@@ -10,6 +10,7 @@ export interface TextFieldProps {
   autoComplete?: string
   error?: string
   disabled?: boolean
+  floating?: boolean
 }
 
 export function TextField({
@@ -22,26 +23,41 @@ export function TextField({
   autoComplete,
   error,
   disabled,
+  floating = false,
 }: TextFieldProps) {
   const errorId = `${id}-error`
 
+  const input = (
+    <input
+      id={id}
+      name={name}
+      type={type}
+      value={value}
+      onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
+      autoComplete={autoComplete}
+      disabled={disabled}
+      placeholder={floating ? ' ' : undefined}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? errorId : undefined}
+      className="input w-full"
+    />
+  )
+
   return (
     <div className="flex flex-col gap-1">
-      <label className="label" htmlFor={id}>
-        {label}
-      </label>
-      <input
-        id={id}
-        name={name}
-        type={type}
-        value={value}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-        autoComplete={autoComplete}
-        disabled={disabled}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        className="input w-full"
-      />
+      {floating ? (
+        <label className="floating-label">
+          <span>{label}</span>
+          {input}
+        </label>
+      ) : (
+        <>
+          <label className="label" htmlFor={id}>
+            {label}
+          </label>
+          {input}
+        </>
+      )}
       {error ? (
         <p id={errorId} role="alert" className="text-error text-sm">
           {error}

@@ -84,6 +84,15 @@ Orden de dependencia: configuración → entidades core → auth → usuario →
   - Asegurar que todos los endpoints aparezcan documentados.
   - Hecho cuando: se accede a `/swagger-ui.html` y se visualizan los endpoints correctamente.
 
+- [x] **T14. Respuestas 401/403 con cuerpo de error.** RF-29, RF-30
+  - `AuthenticationEntryPoint` (401) y `AccessDeniedHandler` (403) con el cuerpo de error estándar.
+  - `JwtAuthenticationFilter` no debe lanzar con token expirado/malformado.
+  - Hecho cuando: token ausente/expirado/malformado → 401 con `{title, status, detail}`; autenticado sin permiso → 403 con el mismo cuerpo; tests en verde.
+
+- [x] **T15. Marcar un ítem de checklist (`PATCH /notes/{uuid}/checklist`).** RF-31
+  - DTO `{item, checked}`; servicio valida dueño, `checklistMode` y existencia del ítem; actualiza solo ese booleano en `contentJson`.
+  - Hecho cuando: marcar/desmarcar es idempotente y devuelve la nota; nota ajena/inexistente/ítem ausente → 404; nota no-checklist → 400; tests en verde.
+
 ---
 
 ## Criterios de finalización comunes

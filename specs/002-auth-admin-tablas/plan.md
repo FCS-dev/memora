@@ -388,6 +388,7 @@ Cada servicio se testea aislando repositories con Mockito:
 - Verificar que `/admin/**` requiera rol ADMIN.
 - Verificar que `/notes/**` y `/tags/**` requieran rol USER.
 - Verificar que usuarios solo accedan a sus propias notas/tags.
+- Verificar 401 con cuerpo de error para token ausente/expirado/malformado y 403 con cuerpo para rol insuficiente. (RF-29, RF-30)
 
 ---
 
@@ -398,6 +399,7 @@ Cada servicio se testea aislando repositories con Mockito:
 | RF-1, RF-2, RF-3, RF-12 | `AdminBootstrap`, `UserRepository` |
 | RF-4, RF-5, RF-21, RF-22, RF-REF-1 | `AuthController`, `AuthService`, `User`, DTOs con Bean Validation |
 | RF-6, RF-9, RF-10, RNF-4 | `AuthController`, `AuthService`, `JwtService`, `RefreshTokenService`, `SecurityConfig` |
+| RF-29, RF-30 | `SecurityConfig` (entry point/handler), `RestSecurityErrorHandler`, `JwtAuthenticationFilter` |
 | RF-7, RF-8 | `AuthService` |
 | RF-11, RF-24 | `UserController`, `UserService` |
 | RF-13, RF-23, RF-25 | `AdminController`, `AdminService` |

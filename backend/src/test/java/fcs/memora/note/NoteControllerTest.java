@@ -1,5 +1,6 @@
 package fcs.memora.note;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -14,6 +15,7 @@ import fcs.memora.auth.PasswordService;
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.ReorderNoteRequest;
+import fcs.memora.note.dto.UpdateChecklistItemRequest;
 import fcs.memora.note.dto.UpdateNoteRequest;
 import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
@@ -28,6 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -73,6 +76,17 @@ class NoteControllerTest {
 
     private String createNote(String token, String title, boolean pinned) throws Exception {
         CreateNoteRequest request = new CreateNoteRequest(title, "Content", false, null, null, pinned, false, null);
+        String response = mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response).get("uuidNote").asText();
+    }
+
+    private String createChecklistNote(String token, Map<String, Boolean> items) throws Exception {
+        CreateNoteRequest request = new CreateNoteRequest(
+            "Checklist", "", true, items, null, false, false, null);
         String response = mockMvc.perform(post("/notes")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -240,5 +254,124 @@ class NoteControllerTest {
 
         mockMvc.perform(get("/notes/" + UUID.randomUUID()).header("Authorization", "Bearer " + token))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldMarkChecklistItem() throws Exception {
+        String token = createUserToken();
+        String uuid = createChecklistNote(token, Map.of("task1", false, "task2", false));
+
+        mockMvc.perform(patch("/notes/" + uuid + "/checklist")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateChecklistItemRequest("task1", true))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.checklistItems.task1").value(true))
+            .andExpect(jsonPath("$.checklistItems.task2").value(false))
+            .andExpect(jsonPath("$.position").doesNotExist());
+    }
+
+    @Test
+    void shouldMarkChecklistItemIdempotently() throws Exception {
+        String token = createUserToken();
+        String uuid = createChecklistNote(token, Map.of("task1", false));
+
+        UpdateChecklistItemRequest request = new UpdateChecklistItemRequest("task1", true);
+
+        mockMvc.perform(patch("/notes/" + uuid + "/checklist")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/notes/" + uuid + "/checklist")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.checklistItems.task1").value(true));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenChecklistItemDoesNotExist() throws Exception {
+        String token = createUserToken();
+        String uuid = createChecklistNote(token, Map.of("task1", false));
+
+        mockMvc.perform(patch("/notes/" + uuid + "/checklist")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateChecklistItemRequest("missing", true))))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRejectChecklistItemOnNonChecklistNote() throws Exception {
+        String token = createUserToken();
+        String uuid = createNote(token, "Text", false);
+
+        mockMvc.perform(patch("/notes/" + uuid + "/checklist")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateChecklistItemRequest("task1", true))))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldNotMarkChecklistItemOfAnotherUsersNote() throws Exception {
+        User owner = userRepository.save(User.builder()
+            .uuidUser("owner-uuid")
+            .email("owner2@example.com")
+            .name("Owner")
+            .passwordHash(passwordService.hashPassword("password123"))
+            .role(UserRole.USER)
+            .userStatus(UserStatus.ACTIVE)
+            .build());
+        String ownerToken = jwtService.generateAccessToken(owner);
+        String uuid = createChecklistNote(ownerToken, Map.of("task1", false));
+
+        String otherToken = createUserToken();
+
+        mockMvc.perform(patch("/notes/" + uuid + "/checklist")
+                .header("Authorization", "Bearer " + otherToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateChecklistItemRequest("task1", true))))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRefreshUpdatedAtOnEveryMutation() throws Exception {
+        String token = createUserToken();
+
+        String createdJson = mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                    new CreateNoteRequest("Checklist", "", true, Map.of("task1", false), null, false, false, null))))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        String uuid = objectMapper.readTree(createdJson).get("uuidNote").asText();
+        LocalDateTime createdUpdatedAt = LocalDateTime.parse(objectMapper.readTree(createdJson).get("updatedAt").asText());
+        LocalDateTime createdAt = LocalDateTime.parse(objectMapper.readTree(createdJson).get("createdAt").asText());
+        assertThat(createdUpdatedAt).isAfterOrEqualTo(createdAt);
+
+        String toggledJson = mockMvc.perform(patch("/notes/" + uuid + "/checklist")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateChecklistItemRequest("task1", true))))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        LocalDateTime afterToggle = LocalDateTime.parse(objectMapper.readTree(toggledJson).get("updatedAt").asText());
+
+        String updatedJson = mockMvc.perform(put("/notes/" + uuid)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                    new UpdateNoteRequest("Changed", "", true, Map.of("task1", true), null, false, null))))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        LocalDateTime afterUpdate = LocalDateTime.parse(objectMapper.readTree(updatedJson).get("updatedAt").asText());
+
+        assertThat(afterToggle).isAfter(createdUpdatedAt);
+        assertThat(afterUpdate).isAfter(afterToggle);
     }
 }

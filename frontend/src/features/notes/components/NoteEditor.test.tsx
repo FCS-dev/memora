@@ -1,0 +1,175 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { ComponentProps } from 'react'
+import { describe, expect, it, vi } from 'vitest'
+import { HttpError } from '../../../shared/lib/http'
+import { NoteEditor } from './NoteEditor'
+import { notesCopy } from '../model/copy'
+import type { Tag } from '../model/types'
+
+const noop = vi.fn()
+
+function renderEditor(overrides: Partial<ComponentProps<typeof NoteEditor>> = {}) {
+  return render(
+    <NoteEditor
+      note={null}
+      tags={[]}
+      onSave={vi.fn().mockResolvedValue(undefined)}
+      onCreateTag={vi.fn()}
+      onCancel={noop}
+      {...overrides}
+    />,
+  )
+}
+
+describe('NoteEditor', () => {
+  it('abre el editor de creación con el campo Título (RF-13)', () => {
+    renderEditor()
+    expect(screen.getByLabelText(notesCopy.labels.title)).toBeInTheDocument()
+  })
+
+  it('guarda una nota de texto y vuelve (RF-13, RF-18)', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    const onCancel = vi.fn()
+    renderEditor({ onSave, onCancel })
+
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.title), 'Mi nota')
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.save }))
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ title: 'Mi nota' }))
+    expect(onCancel).toHaveBeenCalled()
+  })
+
+  it('deriva los ítems del contenido al activar checklist (RF-15)', async () => {
+    renderEditor()
+
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.content), 'uno\ndos')
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.checklistMode }))
+
+    expect(screen.getByLabelText(`${notesCopy.labels.checklistItems} 1`)).toHaveValue('uno')
+    expect(screen.getByLabelText(`${notesCopy.labels.checklistItems} 2`)).toHaveValue('dos')
+  })
+
+  it('permite marcar la casilla de cada ítem (RF-41)', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.checklistMode }))
+    await userEvent.type(screen.getByLabelText(`${notesCopy.labels.checklistItems} 1`), 'casa')
+
+    const checkbox = screen.getByLabelText('Marcar ítem 1')
+    expect(checkbox).not.toBeChecked()
+
+    await userEvent.click(checkbox)
+    expect(checkbox).toBeChecked()
+  })
+
+  it('agrega un ítem con la etiqueta correcta (RF-41)', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.checklistMode }))
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.addItem }))
+
+    expect(screen.getByLabelText(`${notesCopy.labels.checklistItems} 2`)).toBeInTheDocument()
+  })
+
+  it('bloquea el guardado sin título cuando hay datos (RF-21)', async () => {
+    const onSave = vi.fn()
+    renderEditor({ onSave })
+
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.content), 'algo')
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.save }))
+
+    expect(await screen.findByText(notesCopy.errors.required)).toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('crea una etiqueta desde la nota (RF-16)', async () => {
+    const tag: Tag = { id: 5, tagName: 'casa' }
+    const onCreateTag = vi.fn().mockResolvedValue(tag)
+    renderEditor({ onCreateTag })
+
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.newTag), 'casa')
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.addTag }))
+
+    expect(onCreateTag).toHaveBeenCalledWith('casa')
+  })
+
+  it('informa el error de etiqueta duplicada (RF-33)', async () => {
+    const onCreateTag = vi
+      .fn()
+      .mockRejectedValue(new HttpError(400, { detail: 'El tag ya existe' }))
+    renderEditor({ onCreateTag })
+
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.newTag), 'casa')
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.addTag }))
+
+    expect(await screen.findByText(notesCopy.errors.duplicateTag)).toBeInTheDocument()
+  })
+
+  it('muestra el contador de caracteres del contenido (RF-36)', async () => {
+    renderEditor()
+
+    expect(screen.getByText('0/2500')).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.content), 'hola')
+    expect(screen.getByText('4/2500')).toBeInTheDocument()
+  })
+
+  it('cuenta las longitudes de los ítems con checklist activo (RF-36)', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.checklistMode }))
+    await userEvent.type(screen.getByLabelText(`${notesCopy.labels.checklistItems} 1`), 'casa')
+
+    expect(screen.getByText('4/2500')).toBeInTheDocument()
+  })
+
+  it('pide confirmación al salir con cambios (RF-14)', async () => {
+    const onCancel = vi.fn()
+    renderEditor({ onCancel })
+
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.title), 'algo')
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.cancel }))
+
+    expect(screen.getByRole('dialog', { name: notesCopy.confirm.discardTitle })).toBeInTheDocument()
+    expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  it('usa floating label en título, recordatorio y nueva etiqueta (RF-45)', () => {
+    renderEditor()
+    for (const label of [
+      notesCopy.labels.title,
+      notesCopy.labels.reminder,
+      notesCopy.labels.newTag,
+    ]) {
+      expect(screen.getByLabelText(label).closest('label')?.className).toContain('floating-label')
+    }
+  })
+
+  it('controla checklist y fijada con botones de ícono (RF-47)', async () => {
+    renderEditor()
+    const checklist = screen.getByRole('button', { name: notesCopy.labels.checklistMode })
+    expect(checklist).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(checklist)
+    expect(screen.getByRole('button', { name: notesCopy.labels.checklistMode })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    const pin = screen.getByRole('button', { name: notesCopy.actions.pin })
+    await userEvent.click(pin)
+    expect(screen.getByRole('button', { name: notesCopy.actions.unpin })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('el input de ítem solo muestra borde inferior y altura 1rem, con botón de cruz (RF-48, RF-49)', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.checklistMode }))
+
+    const itemInput = screen.getByLabelText(`${notesCopy.labels.checklistItems} 1`)
+    expect(itemInput.className).toContain('border-t-0')
+    expect(itemInput.className).toContain('h-4')
+    expect(screen.getByRole('button', { name: notesCopy.actions.delete })).toBeInTheDocument()
+  })
+})

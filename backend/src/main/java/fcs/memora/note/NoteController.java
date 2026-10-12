@@ -4,6 +4,7 @@ import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.NoteResponse;
 import fcs.memora.note.dto.ReorderNoteRequest;
+import fcs.memora.note.dto.UpdateChecklistItemRequest;
 import fcs.memora.note.dto.UpdateNoteRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -98,5 +99,15 @@ public class NoteController {
         @PathVariable String uuidNote,
         @Valid @RequestBody ChangeNoteGroupRequest request) {
         return ResponseEntity.ok(noteService.changeGroup(userDetails.getUsername(), uuidNote, request));
+    }
+
+    @PatchMapping("/{uuidNote}/checklist")
+    @Operation(summary = "Marcar o desmarcar un ítem de una nota checklist")
+    public ResponseEntity<NoteResponse> updateChecklistItem(
+        @AuthenticationPrincipal UserDetails userDetails,
+        @PathVariable String uuidNote,
+        @Valid @RequestBody UpdateChecklistItemRequest request) {
+        return ResponseEntity.ok(noteService.updateChecklistItem(
+            userDetails.getUsername(), uuidNote, request.item(), request.checked()));
     }
 }

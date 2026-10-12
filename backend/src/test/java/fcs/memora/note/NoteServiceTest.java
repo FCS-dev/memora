@@ -56,7 +56,7 @@ class NoteServiceTest {
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.maxPosition(user, false, false)).thenReturn(Optional.of(200_000L));
         when(noteRepository.existsByUuidNote(any())).thenReturn(false);
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.create("uuid",
             new CreateNoteRequest("Title", "Content", false, null, null, false, false, null));
@@ -66,7 +66,7 @@ class NoteServiceTest {
         assertThat(response.isArchived()).isFalse();
 
         ArgumentCaptor<Note> captor = ArgumentCaptor.forClass(Note.class);
-        verify(noteRepository).save(captor.capture());
+        verify(noteRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPosition()).isEqualTo(300_000L);
     }
 
@@ -76,7 +76,7 @@ class NoteServiceTest {
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.maxPosition(user, true, false)).thenReturn(Optional.empty());
         when(noteRepository.existsByUuidNote(any())).thenReturn(false);
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.create("uuid",
             new CreateNoteRequest("Title", "Content", false, null, null, true, false, null));
@@ -98,7 +98,7 @@ class NoteServiceTest {
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.maxPosition(user, false, false)).thenReturn(Optional.of(100_000L));
         when(noteRepository.existsByUuidNote(any())).thenReturn(true, true, false);
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         noteService.create("uuid", new CreateNoteRequest("Title", "Content", false, null, null, false, false, null));
 
@@ -136,7 +136,7 @@ class NoteServiceTest {
         Note note = note(user, NOTE_UUID, 100_000L, false, false);
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.update("uuid", NOTE_UUID,
             new UpdateNoteRequest("New", "New content", false, null, null, null, null));
@@ -153,7 +153,7 @@ class NoteServiceTest {
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
         when(noteRepository.maxPosition(user, true, false)).thenReturn(Optional.of(500_000L));
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.update("uuid", NOTE_UUID,
             new UpdateNoteRequest("New", "c", false, null, null, true, null));
@@ -169,7 +169,7 @@ class NoteServiceTest {
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
         when(noteRepository.maxPosition(user, false, false)).thenReturn(Optional.of(400_000L));
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.update("uuid", NOTE_UUID,
             new UpdateNoteRequest("New", "c", false, null, null, false, null));
@@ -207,7 +207,7 @@ class NoteServiceTest {
         when(noteRepository.findByUuidNoteAndUser(AFTER_UUID, user)).thenReturn(Optional.of(top));
         when(noteRepository.findByUserAndIsPinnedAndIsArchivedOrderByPositionDescIdDesc(user, false, false))
             .thenReturn(new java.util.ArrayList<>(List.of(top, note)));
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         noteService.reorder("uuid", NOTE_UUID, new ReorderNoteRequest(null, AFTER_UUID));
 
@@ -226,8 +226,8 @@ class NoteServiceTest {
         when(noteRepository.findByUuidNoteAndUser(AFTER_UUID, user)).thenReturn(Optional.of(after));
         when(noteRepository.findByUserAndIsPinnedAndIsArchivedOrderByPositionDescIdDesc(user, false, false))
             .thenReturn(new java.util.ArrayList<>(List.of(before, after, note)));
-        when(noteRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAllAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         noteService.reorder("uuid", NOTE_UUID, new ReorderNoteRequest(BEFORE_UUID, AFTER_UUID));
 
@@ -277,7 +277,7 @@ class NoteServiceTest {
         Note note = note(user, NOTE_UUID, 300_000L, false, false);
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.changeGroup("uuid", NOTE_UUID,
             new ChangeNoteGroupRequest(NoteGroup.ARCHIVED));
@@ -294,7 +294,7 @@ class NoteServiceTest {
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
         when(noteRepository.maxPosition(user, true, false)).thenReturn(Optional.of(400_000L));
-        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.changeGroup("uuid", NOTE_UUID,
             new ChangeNoteGroupRequest(NoteGroup.PINNED));
@@ -313,6 +313,55 @@ class NoteServiceTest {
         assertThatThrownBy(() -> noteService.changeGroup("uuid", NOTE_UUID,
             new ChangeNoteGroupRequest(NoteGroup.NOT_PINNED)))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldMarkChecklistItemWithoutTouchingOthers() {
+        User user = user();
+        Note note = checklistNote(user, "{\"task1\":false,\"task2\":true}");
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        NoteResponse response = noteService.updateChecklistItem("uuid", NOTE_UUID, "task1", true);
+
+        assertThat(response.checklistItems()).containsEntry("task1", true).containsEntry("task2", true);
+        assertThat(note.getContentJson()).contains("\"task1\":true");
+    }
+
+    @Test
+    void shouldRejectUnknownChecklistItem() {
+        User user = user();
+        Note note = checklistNote(user, "{\"task1\":false}");
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
+
+        assertThatThrownBy(() -> noteService.updateChecklistItem("uuid", NOTE_UUID, "missing", true))
+            .isInstanceOf(UsernameNotFoundException.class);
+    }
+
+    @Test
+    void shouldRejectChecklistItemOnNonChecklistNote() {
+        User user = user();
+        Note note = note(user, NOTE_UUID, 300_000L, false, false);
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
+
+        assertThatThrownBy(() -> noteService.updateChecklistItem("uuid", NOTE_UUID, "task1", true))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private Note checklistNote(User user, String contentJson) {
+        return Note.builder()
+            .id(++idSequence)
+            .uuidNote(NOTE_UUID)
+            .user(user)
+            .title("Checklist")
+            .content("")
+            .contentJson(contentJson)
+            .checklistMode(true)
+            .position(100_000L)
+            .build();
     }
 
     private Note note(User user, String uuid, long position, boolean isPinned, boolean isArchived) {

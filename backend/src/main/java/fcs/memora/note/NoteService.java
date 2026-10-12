@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,7 +68,7 @@ public class NoteService {
             .tags(tags)
             .build();
 
-        return toResponse(noteRepository.save(note));
+        return toResponse(noteRepository.saveAndFlush(note));
     }
 
     @Transactional(readOnly = true)
@@ -118,7 +119,7 @@ public class NoteService {
             note.setPosition(maxPosition + STEP);
         }
 
-        return toResponse(noteRepository.save(note));
+        return toResponse(noteRepository.saveAndFlush(note));
     }
 
     @Transactional
@@ -153,14 +154,14 @@ public class NoteService {
             for (int i = 0; i < groupNotes.size(); i++) {
                 groupNotes.get(i).setPosition(positions.get(i));
             }
-            noteRepository.saveAll(groupNotes);
+            noteRepository.saveAllAndFlush(groupNotes);
             upper = before != null ? before.getPosition() : null;
             lower = after != null ? after.getPosition() : null;
             candidate = NotePositioner.resolvePosition(upper, lower, STEP);
         }
 
         note.setPosition(candidate);
-        return toResponse(noteRepository.save(note));
+        return toResponse(noteRepository.saveAndFlush(note));
     }
 
     @Transactional
@@ -185,7 +186,26 @@ public class NoteService {
             note.setPosition(maxPosition + STEP);
         }
 
-        return toResponse(noteRepository.save(note));
+        return toResponse(noteRepository.saveAndFlush(note));
+    }
+
+    @Transactional
+    public NoteResponse updateChecklistItem(String uuidUser, String uuidNote, String item, boolean checked) {
+        User user = findActiveUser(uuidUser);
+        Note note = findUserNote(user, uuidNote);
+
+        if (!note.isChecklistMode()) {
+            throw new IllegalArgumentException("La nota no es una checklist");
+        }
+
+        Map<String, Boolean> items = new LinkedHashMap<>(fromJson(note.getContentJson()));
+        if (!items.containsKey(item)) {
+            throw new UsernameNotFoundException("Ítem no encontrado");
+        }
+
+        items.put(item, checked);
+        note.setContentJson(toJson(items));
+        return toResponse(noteRepository.saveAndFlush(note));
     }
 
     @Transactional

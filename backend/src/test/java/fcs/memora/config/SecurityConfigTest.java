@@ -2,6 +2,7 @@ package fcs.memora.config;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -35,14 +36,16 @@ class SecurityConfigTest {
     }
 
     @Test
-    void protectedEndpointsShouldBeDeniedWithoutUserRole() throws Exception {
+    void protectedEndpointsShouldRequireAuthentication() throws Exception {
         mockMvc.perform(get("/notes"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401));
     }
 
     @Test
-    void adminEndpointsShouldBeDeniedWithoutAdminRole() throws Exception {
+    void adminEndpointsShouldRequireAuthentication() throws Exception {
         mockMvc.perform(get("/admin/users/test/status"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.detail").isNotEmpty());
     }
 }
