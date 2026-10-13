@@ -11,6 +11,7 @@ export interface TextFieldProps {
   error?: string
   disabled?: boolean
   floating?: boolean
+  placeholder?: string
 }
 
 export function TextField({
@@ -24,6 +25,7 @@ export function TextField({
   error,
   disabled,
   floating = false,
+  placeholder,
 }: TextFieldProps) {
   const errorId = `${id}-error`
 
@@ -36,7 +38,7 @@ export function TextField({
       onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
       autoComplete={autoComplete}
       disabled={disabled}
-      placeholder={floating ? ' ' : undefined}
+      placeholder={placeholder ?? (floating ? ' ' : undefined)}
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? errorId : undefined}
       className="input w-full"

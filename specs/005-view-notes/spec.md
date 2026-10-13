@@ -74,6 +74,11 @@ El backend ya permite consultar, crear, editar, eliminar, reordenar y agrupar no
 - RF-48: EL SISTEMA debe reemplazar los botones "Eliminar ítem" y "Agregar etiqueta" por botones de ícono (cruz y más), sin borde.
 - RF-49: EL SISTEMA debe mostrar el input de cada ítem del checklist con borde únicamente inferior y una altura de 1rem.
 - RF-50: CUANDO el usuario cree o edite una nota, EL SISTEMA debe: no mostrar el título de pantalla ni los rótulos "Nota"/"Lista"; ubicar el recordatorio (ancho de 25 caracteres) a la derecha de los botones de checklist y fijada; no aplicar separación (gap) al fieldset de la lista; y mostrar la sección de etiquetas con un tamaño de fuente de 0.75rem.
+- RF-51: CUANDO el usuario cree o edite una nota con un recordatorio cargado, EL SISTEMA debe ofrecer un botón de ícono (cruz) junto al campo para quitar el recordatorio, dejando la nota sin recordatorio.
+- RF-52: EL SISTEMA debe mostrar cada ítem del checklist con un tamaño de fuente de 0.75rem y una altura base de fila de 1.5rem (checkbox, asa de arrastre y botón de eliminación centrados, con el input de alto base de 1rem); SI el texto del ítem es largo, ENTONCES el campo debe crecer en altura hasta mostrar 3 líneas y, pasado ese punto, desplazarse internamente.
+- RF-53: CUANDO el usuario cree o edite una nota, EL SISTEMA debe ofrecer las etiquetas desde un botón que abre una ventana modal; la modal debe mostrar arriba un campo para crear una etiqueta nueva y debajo las casillas de las etiquetas disponibles; el botón de agregar ("+") debe aparecer al escribir en el campo, agregar la etiqueta a la lista, dejarla marcada y limpiar el campo; la modal debe poder cerrarse con su botón "x" o al hacer click fuera de ella.
+- RF-54: MIENTRAS la pantalla sea el listado de notas, EL SISTEMA debe mostrar el botón "Nueva nota" (en escritorio) centrado horizontalmente, con el control de vista a la izquierda y el selector Notas/Archivadas a la derecha.
+- RF-55: CUANDO el usuario cree o edite una nota y un campo esté vacío, EL SISTEMA debe mostrar un texto de ayuda (placeholder) en los campos Título, contenido de la nota, cada ítem del checklist y nueva etiqueta; el texto de ayuda desaparece al escribir o al enfocar el campo.
 
 ### Eliminación
 - RF-19: CUANDO el usuario solicite eliminar una nota, EL SISTEMA debe pedir confirmación antes de eliminarla.
@@ -159,6 +164,10 @@ El backend ya permite consultar, crear, editar, eliminar, reordenar y agrupar no
 - Sesión expirada con refresh fallido: se informa y se dirige al acceso. (RF-40)
 - Marcar/desmarcar un ítem en la tarjeta (card, lista y Archivadas): persiste solo ese ítem, no abre la nota ni cambia el orden; si falla, se revierte. (RF-42)
 - Marcar ítems desde el editor y guardar: persiste el `true/false` de cada ítem. (RF-41)
+- Quitar un recordatorio cargado: la nota queda sin recordatorio y el botón de cruz desaparece. (RF-51)
+- Ítem de checklist con texto corto (una línea) y con texto largo (crece hasta 3 líneas y luego se desplaza). (RF-52)
+- Modal de etiquetas: el botón "+" solo aparece con texto en el campo; la etiqueta creada se agrega y queda marcada; cerrar con "x" o click fuera descarta la selección en curso pero conserva lo ya marcado. (RF-53)
+- Listado en escritorio: el botón "Nueva nota" permanece centrado con paneles a los costados. (RF-54)
 
 ## Fuera de alcance
 
@@ -196,6 +205,11 @@ El backend ya permite consultar, crear, editar, eliminar, reordenar y agrupar no
 - [ ] Editor y tarjetas muestran casillas de checklist marcables; el marcado en la tarjeta persiste con una operación automática (optimista, con reversión) sin abrir la nota. (RF-41, RF-42)
 - [ ] Editor con floating labels (Título/Recordatorio/Nueva etiqueta), labels "Nota"/"Lista", toggles de ícono (checklist y fijada), botones SVG de cruz/más y input de ítem con borde inferior a 1rem. (RF-45 .. RF-49)
 - [ ] Editor sin título ni rótulos, recordatorio a la derecha (ancho 25) junto a los botones, fieldset de lista sin gap y etiquetas a 0.75rem. (RF-50)
+- [ ] Editor permite quitar el recordatorio con un botón de cruz. (RF-51)
+- [ ] Ítems de checklist con fuente 0.75rem, fila base de 1.5rem y crecimiento hasta 3 líneas. (RF-52)
+- [ ] Etiquetas desde un botón que abre una modal con casillas y alta dinámica ("+"), cerrable con "x" o click fuera. (RF-53)
+- [ ] Botón "Nueva nota" centrado en el listado (escritorio), con vista y selector a los costados. (RF-54)
+- [ ] Campos Título, contenido, ítem del checklist y nueva etiqueta muestran un texto de ayuda cuando están vacíos. (RF-55)
 - [ ] Etiquetas en la tarjeta en una sola línea, con "..." cuando desbordan. (RF-3)
 - [ ] Responsive y accesible (WCAG 2.1 AA); errores y logs sin datos sensibles. (RNF-1, RNF-2, RNF-8, RNF-9)
 - [ ] Los tests correspondientes pasan.

@@ -1,14 +1,21 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useNoteEditor } from './useNoteEditor'
-import type { Note } from '../model/types'
+import type { ChecklistItemForm, Note } from '../model/types'
+
+function stripId(items: ChecklistItemForm[]) {
+  return items.map(({ text, checked }) => ({ text, checked }))
+}
 
 const note: Note = {
   uuidNote: 'N',
   title: 'Nota',
   content: '',
   checklistMode: true,
-  checklistItems: { uno: true, dos: false },
+  checklistItems: [
+    { text: 'uno', checked: true },
+    { text: 'dos', checked: false },
+  ],
   rememberAt: '2026-02-03T08:30:00',
   isPinned: false,
   isArchived: false,
@@ -25,7 +32,7 @@ describe('useNoteEditor', () => {
     act(() => result.current.toggleChecklistMode())
 
     expect(result.current.values.checklistMode).toBe(true)
-    expect(result.current.values.checklistItems).toEqual([
+    expect(stripId(result.current.values.checklistItems)).toEqual([
       { text: 'uno', checked: false },
       { text: 'dos', checked: false },
       { text: 'tres', checked: false },
@@ -35,7 +42,7 @@ describe('useNoteEditor', () => {
   it('muestra una primera casilla si no hay contenido (RF-15)', () => {
     const { result } = renderHook(() => useNoteEditor(null, {}, vi.fn()))
     act(() => result.current.toggleChecklistMode())
-    expect(result.current.values.checklistItems).toEqual([{ text: '', checked: false }])
+    expect(stripId(result.current.values.checklistItems)).toEqual([{ text: '', checked: false }])
   })
 
   it('permite marcar y desmarcar un ítem (RF-41)', () => {
@@ -43,9 +50,21 @@ describe('useNoteEditor', () => {
 
     act(() => result.current.toggleChecklistItemChecked(1))
 
-    expect(result.current.values.checklistItems).toEqual([
+    expect(stripId(result.current.values.checklistItems)).toEqual([
       { text: 'uno', checked: true },
       { text: 'dos', checked: true },
+    ])
+    expect(result.current.dirty).toBe(true)
+  })
+
+  it('reordena los ítems del checklist (RF-4, RF-5)', () => {
+    const { result } = renderHook(() => useNoteEditor(note, { casa: 7 }, vi.fn()))
+
+    act(() => result.current.moveChecklistItem(0, 1))
+
+    expect(stripId(result.current.values.checklistItems)).toEqual([
+      { text: 'dos', checked: false },
+      { text: 'uno', checked: true },
     ])
     expect(result.current.dirty).toBe(true)
   })
@@ -99,7 +118,7 @@ describe('useNoteEditor', () => {
     const { result } = renderHook(() => useNoteEditor(note, { casa: 7 }, onSave))
 
     expect(result.current.values.title).toBe('Nota')
-    expect(result.current.values.checklistItems).toEqual([
+    expect(stripId(result.current.values.checklistItems)).toEqual([
       { text: 'uno', checked: true },
       { text: 'dos', checked: false },
     ])
@@ -111,7 +130,12 @@ describe('useNoteEditor', () => {
     })
 
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ checklistItems: { uno: true, dos: false } }),
+      expect.objectContaining({
+        checklistItems: [
+          { text: 'uno', checked: true },
+          { text: 'dos', checked: false },
+        ],
+      }),
     )
   })
 })

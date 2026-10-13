@@ -9,7 +9,7 @@ export interface Note {
   title: string
   content: string
   checklistMode: boolean
-  checklistItems: Record<string, boolean> | null
+  checklistItems: ChecklistItemForm[] | null
   rememberAt: string | null
   isPinned: boolean
   isArchived: boolean
@@ -24,6 +24,7 @@ export interface Tag {
 }
 
 export interface ChecklistItemForm {
+  clientId?: string
   text: string
   checked: boolean
 }
@@ -46,7 +47,7 @@ export interface CreateNotePayload {
   title: string
   content: string | null
   checklistMode: boolean
-  checklistItems: Record<string, boolean> | null
+  checklistItems: ChecklistItemForm[] | null
   rememberAt: string | null
   isPinned: boolean
   isArchived: boolean
@@ -57,7 +58,7 @@ export interface UpdateNotePayload {
   title: string
   content: string | null
   checklistMode: boolean
-  checklistItems: Record<string, boolean> | null
+  checklistItems: ChecklistItemForm[] | null
   rememberAt: string | null
   isPinned: boolean | null
   tagIds: number[]

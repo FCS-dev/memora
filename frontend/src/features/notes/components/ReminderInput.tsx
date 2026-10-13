@@ -1,3 +1,7 @@
+import { IconButton } from '../../../shared/components/IconButton'
+import { notesCopy } from '../model/copy'
+import { CrossIcon } from './icons'
+
 export interface ReminderInputProps {
   id: string
   label: string
@@ -7,7 +11,7 @@ export interface ReminderInputProps {
 
 export function ReminderInput({ id, label, value, onChange }: ReminderInputProps) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex items-center gap-1">
       <label className="floating-label">
         <span>{label}</span>
         <input
@@ -20,6 +24,11 @@ export function ReminderInput({ id, label, value, onChange }: ReminderInputProps
           className="input w-[25ch]"
         />
       </label>
+      {value !== '' ? (
+        <IconButton label={notesCopy.actions.clearReminder} onClick={() => onChange('')}>
+          <CrossIcon />
+        </IconButton>
+      ) : null}
     </div>
   )
 }

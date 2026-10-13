@@ -38,7 +38,7 @@
 - `src/features/auth/model/types.ts` — `Role`, `AuthUser`, `Session`, estados de sesión.
 - `src/features/auth/model/validation.ts` — funciones puras de validación (sección 2).
 - `src/features/auth/model/errors.ts` — `mapLoginError` (sección 2).
-- `src/features/auth/model/copy.ts` — mensajes visibles en español neutro centralizados. (RNF-1)
+- `src/features/auth/model/copy.ts` — mensajes y textos de ayuda (placeholder) visibles en español neutro (sin voseo) centralizados. (RNF-1, RF-30)
 - `src/features/auth/api/authApi.ts` — `register`, `login`, `refresh`, `logout`, `getMe` sobre `http.ts`. (RF-2, RF-12, RF-17, RF-18, RF-19, RF-21)
 - `src/features/auth/context/authContext.ts` — contexto de sesión. (RF-17, RF-19)
 - `src/features/auth/context/AuthProvider.tsx` — sesión en memoria, estado (`loading|anonymous|authenticated|restoreError`) y acciones. (RF-17, RF-19, RF-20, RF-21, RF-23)
@@ -192,7 +192,8 @@ GUARDS:
 | RF-24, RF-25 | `UserHomePage`, `AdminHomePage`, `HomeHeader` |
 | RF-26..RF-28 | `RequireAuth`, `RequireRole`, `PublicOnly`, `resolveInitialRoute` |
 | RF-29 | `http.ts`, `mapLoginError('server')`, `ErrorAlert` |
-| RNF-1 | `copy.ts`, textos en español |
+| RF-30 | `TextField`/`PasswordInput` (prop `placeholder`), `LoginForm`, `RegisterForm`, `copy.ts` |
+| RNF-1 | `copy.ts`, textos en español neutro (sin voseo) |
 | RNF-2 | `http.ts` (sin exponer cuerpos sensibles), sin logs de contraseñas |
 | RNF-3 | Tailwind mobile-first, pruebas de no desbordamiento 320–1280 |
 | RNF-4 | `TextField`, `ErrorAlert`, `PasswordInput`, tests de accesibilidad |

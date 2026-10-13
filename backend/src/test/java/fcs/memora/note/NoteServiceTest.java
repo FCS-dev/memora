@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
+import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.NoteResponse;
 import fcs.memora.note.dto.ReorderNoteRequest;
@@ -318,21 +319,22 @@ class NoteServiceTest {
     @Test
     void shouldMarkChecklistItemWithoutTouchingOthers() {
         User user = user();
-        Note note = checklistNote(user, "{\"task1\":false,\"task2\":true}");
+        Note note = checklistNote(user, "[{\"text\":\"task1\",\"checked\":false},{\"text\":\"task2\",\"checked\":true}]");
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
         when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         NoteResponse response = noteService.updateChecklistItem("uuid", NOTE_UUID, "task1", true);
 
-        assertThat(response.checklistItems()).containsEntry("task1", true).containsEntry("task2", true);
-        assertThat(note.getContentJson()).contains("\"task1\":true");
+        assertThat(response.checklistItems())
+            .containsExactly(new ChecklistItem("task1", true), new ChecklistItem("task2", true));
+        assertThat(note.getContentJson()).contains("\"text\":\"task1\"").contains("\"checked\":true");
     }
 
     @Test
     void shouldRejectUnknownChecklistItem() {
         User user = user();
-        Note note = checklistNote(user, "{\"task1\":false}");
+        Note note = checklistNote(user, "[{\"text\":\"task1\",\"checked\":false}]");
         when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
         when(noteRepository.findByUuidNoteAndUser(NOTE_UUID, user)).thenReturn(Optional.of(note));
 

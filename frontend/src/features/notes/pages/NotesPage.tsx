@@ -112,18 +112,16 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
       <main className="mx-auto w-full p-4 pb-24 lg:pb-6 min-[2560px]:w-[90%]">
         {mode === 'list' ? (
           <>
-            <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="relative mb-3 flex items-center justify-between gap-2">
               <ViewModeToggle mode={viewMode} onChange={changeView} />
-              <div className="flex items-center gap-2">
-                <PanelSwitch panel={panel} onChange={setPanel} />
-                <button
-                  type="button"
-                  className="btn btn-primary hidden lg:inline-flex"
-                  onClick={() => navigate('/home/new')}
-                >
-                  {notesCopy.actions.newNote}
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn btn-primary absolute left-1/2 hidden -translate-x-1/2 lg:inline-flex"
+                onClick={() => navigate('/home/new')}
+              >
+                {notesCopy.actions.newNote}
+              </button>
+              <PanelSwitch panel={panel} onChange={setPanel} />
             </div>
             <NotesPanel
               title={panel === 'main' ? notesCopy.titles.notes : notesCopy.sections.archived}
@@ -155,6 +153,10 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
               viewMode={viewMode}
               loading={loading}
               error={error}
+              emptyTitle={panel === 'main' ? notesCopy.empty.notesTitle : notesCopy.empty.archivedTitle}
+              emptyMessage={
+                panel === 'main' ? notesCopy.empty.notesMessage : notesCopy.empty.archivedMessage
+              }
               onRetry={() => void reload()}
               onOpen={(note) => navigate(`/home/${note.uuidNote}`)}
               onTogglePin={handleTogglePin}

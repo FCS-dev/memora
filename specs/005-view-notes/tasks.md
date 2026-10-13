@@ -91,3 +91,31 @@
 - [x] **T23. Ajustes finos del editor.**
   RF-50
 - Hecho cuando: el editor no muestra el título ni los rótulos "Nota"/"Lista"; el recordatorio (ancho 25) queda a la derecha de los botones de checklist/pin; el fieldset de la lista no tiene gap; la sección de etiquetas usa 0.75rem; `npm run test`, `npm run lint` y `npm run build` en verde.
+
+- [x] **T24. Quitar el recordatorio desde el editor.**
+  RF-51
+- Hecho cuando: `ReminderInput` muestra un botón de cruz junto al campo solo cuando hay recordatorio y al pulsarlo lo vacía; test de componente en verde.
+
+- [x] **T25. Tipografía, altura y crecimiento de los ítems del checklist.**
+  RF-49, RF-52
+- Hecho cuando: los ítems usan 0.75rem con fila base de 1rem (checkbox/asa/cruz ajustados) y el campo es un `textarea` que crece hasta 3 líneas y luego desplaza; tests de componente en verde. (Revisado en T29: la fila base pasa a 1.5rem.)
+
+- [x] **T26. Etiquetas en ventana modal.**
+  RF-53
+- Hecho cuando: un botón abre una modal con el campo de nueva etiqueta (botón "+" dinámico) y las casillas de las disponibles; la nueva se agrega y queda marcada; cierra con "x" o click fuera; tests en verde.
+
+- [x] **T27. Centrar el botón "Nueva nota" en el listado.**
+  RF-54
+- Hecho cuando: en escritorio el botón queda centrado con el control de vista a la izquierda y el selector Notas/Archivadas a la derecha; test en verde.
+
+- [x] **T28. Verificación final y documentación.**
+  RF-49, RF-51 .. RF-54, RNF-2
+- Hecho cuando: `npm run test`, `npm run lint` y `npm run build` pasan; se revisa en navegador el crecimiento de ítems y la modal; `tasks.md` marcado y `MEMORY.md` actualizado.
+
+- [x] **T29. Altura base de la fila del ítem a 1.5rem.**
+  RF-52
+- Hecho cuando: el `div` que agrupa los elementos de cada ítem usa `min-h-6` (1.5rem) manteniendo los elementos internos centrados y el crecimiento del texto hasta 3 líneas; test de componente en verde.
+
+- [x] **T30. Placeholders en el editor y limpieza de voseo.**
+  RF-55, RNF-1
+- Hecho cuando: Título, contenido, ítem del checklist y nueva etiqueta muestran un texto de ayuda (neutro, sin voseo) cuando están vacíos; `notesCopy` no contiene voseo; tests de componente en verde.

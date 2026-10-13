@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
 import { mapNotesError } from '../model/errors'
 import {
-  buildChecklistRecord,
+  buildChecklistPayload,
   buildCreatePayload,
   buildUpdatePayload,
   deriveChecklistItems,
   emptyFormValues,
   isNoteEmpty,
+  newChecklistItem,
   noteToFormValues,
   sameFormValues,
   validateNoteForm,
@@ -35,6 +36,7 @@ export interface UseNoteEditorResult {
   toggleChecklistItemChecked: (index: number) => void
   addChecklistItem: () => void
   removeChecklistItem: (index: number) => void
+  moveChecklistItem: (fromIndex: number, toIndex: number) => void
   toggleChecklistMode: () => void
   save: () => Promise<SaveResult>
 }
@@ -77,7 +79,7 @@ export function useNoteEditor(
   const addChecklistItem = useCallback(() => {
     setValues((current) => ({
       ...current,
-      checklistItems: [...current.checklistItems, { text: '', checked: false }],
+      checklistItems: [...current.checklistItems, newChecklistItem()],
     }))
   }, [])
 
@@ -86,6 +88,16 @@ export function useNoteEditor(
       ...current,
       checklistItems: current.checklistItems.filter((_, i) => i !== index),
     }))
+  }, [])
+
+  const moveChecklistItem = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+    setValues((current) => {
+      const items = [...current.checklistItems]
+      const [removed] = items.splice(fromIndex, 1)
+      items.splice(toIndex, 0, removed)
+      return { ...current, checklistItems: items }
+    })
   }, [])
 
   const toggleChecklistMode = useCallback(() => {
@@ -102,7 +114,7 @@ export function useNoteEditor(
       return {
         ...current,
         checklistMode: true,
-        checklistItems: items.length > 0 ? items : [{ text: '', checked: false }],
+        checklistItems: items.length > 0 ? items : [newChecklistItem()],
       }
     })
   }, [])
@@ -118,10 +130,10 @@ export function useNoteEditor(
     }
     setSaving(true)
     try {
-      const record = values.checklistMode
-        ? buildChecklistRecord(values.checklistItems)
+      const checklistItems = values.checklistMode
+        ? buildChecklistPayload(values.checklistItems)
         : null
-      const payload = note ? buildUpdatePayload(values, record) : buildCreatePayload(values, record)
+      const payload = note ? buildUpdatePayload(values, checklistItems) : buildCreatePayload(values, checklistItems)
       await onSave(payload)
       return { status: 'saved' }
     } catch (saveError) {
@@ -141,6 +153,7 @@ export function useNoteEditor(
     toggleChecklistItemChecked,
     addChecklistItem,
     removeChecklistItem,
+    moveChecklistItem,
     toggleChecklistMode,
     save,
   }

@@ -3,15 +3,10 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
-- Spec 001 (backend inicial) implementada al 100%.
-- Spec 002 (autenticación, autorización y entidades) implementada al 100%: T1-T15 marcadas en `specs/002-auth-admin-tablas/tasks.md` (T14: 401/403 con cuerpo; T15: `PATCH /notes/{uuid}/checklist`; RF-32: `updatedAt` fresco en la respuesta de cada mutación).
-- Backend Spring Boot 4.1.1 con Java 21; endpoints de auth, users, admin, notes (incl. marcar ítem de checklist) y tags operativos.
-- Suite de tests del backend: 142 tests en verde; `mvn package -DskipTests` exitoso.
-- Spec 003 (frontend login/registro) implementada al 100%: T1-T10 marcadas en `specs/003-login-register/tasks.md`.
-- Frontend React 19 + Vite 8 + Tailwind 4/DaisyUI 5 en `frontend/`; 152 tests Vitest en verde, lint y build OK.
-- E2E verificado contra backend real: registro+auto-login, guards de rol, persistencia, logout, errores de login y responsive 320–1280.
-- Spec 004 (UUID y orden manual de notas) implementada al 100%: T1-T9 marcadas en `specs/004-note-uuid-position/tasks.md`; Spec 002 ajustada (RF-15 derogado, RF-20 a UUID 36).
-- Spec 005 (gestión de notas en la interfaz) implementada al 100%: T1-T23 marcadas en `specs/005-view-notes/tasks.md` (vista global, ciclo completo; frontend). Revisión 2 (T12-T17): saltos de línea en el extracto, ancho responsive de tarjetas, contador `N/2500`, FAB `+` oculto en creación/edición e indicador `...` al recortar. T18: errores con el motivo del servidor y sesión expirada. T19: casillas de checklist marcables en editor y tarjetas. T20: selector Notas/Archivadas (reemplaza el acordeón), leyenda de última actualización, `line-height` 1.25rem y grid con tope 500px.
+- Specs 001-006 implementadas al 100%; backend (142 tests) y frontend (166 tests) en verde, lint y build OK.
+- Spec 005 (gestión de notas en UI): ciclo completo con drag&drop, checklist, archivadas, vista responsive y editor pulido.
+- Scripts de desarrollo: `scripts/start-dev.sh` levanta DB + backend + frontend; `scripts/stop-dev.sh` los detiene.
+- Historial detallado archivado en `docs/memory-archive/2026-10-13-specs-001-005.md`.
 
 ## Decisiones vigentes
 - Java 21 vía SDKMAN (`.sdkmanrc`); `.env` se carga manualmente con `source .env` antes de Maven/app.
@@ -29,9 +24,12 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Plan 003: React Router + access token en memoria (refresh por cookie HttpOnly), proxy Vite `/api`→`:8080`, `fetch` nativo, Context para sesión, tests con Vitest + Testing Library; refresh *single-flight* por pestaña.
 - Tailwind 4 + DaisyUI 5 con `@tailwindcss/vite` (CSS-first) en lugar de Tailwind 3/postcss (desvío justificado: versión vigente y sin vulnerabilidades dev).
 - Longitudes alineadas (backend 002/003 + frontend): name 3–150, email 5–150, password 8–20 (hash 256), title 1–200, content 0–2500, tag 1–25.
-- `Note.contentJson` es `jsonb` (`@JdbcTypeCode(SqlTypes.JSON)`); validación personalizada `@ValidChecklist` (null si checklistMode=false; con checklist: al menos 1 key no vacía y suma de longitudes de keys ≤ 2500). Marcar un ítem usa `PATCH /notes/{uuid}/checklist` `{item, checked}`, idempotente, actualiza solo ese booleano (404 ajena/ítem ausente; 400 no-checklist). Toda mutación en `NoteService` usa `saveAndFlush` para que `@PreUpdate` corra y la respuesta traiga el `updatedAt` nuevo (antes salía el viejo hasta el commit).
+- `Note.contentJson` es `jsonb` (`@JdbcTypeCode(SqlTypes.JSON)`); checklist como arreglo ordenado `[{text,checked}]` (Spec 006) para preservar orden y permitir ítems duplicados. Marcar un ítem usa `PATCH /notes/{uuid}/checklist` `{item, checked}`, idempotente, busca por texto. Toda mutación en `NoteService` usa `saveAndFlush` para `updatedAt` fresco.
+- Spec 006 (frontend): `ChecklistItemForm` con `clientId` local (React key estable); reordenamiento de ítems en el editor por asa (Pointer Events) y atajos `Ctrl/Cmd+↑/↓`; auto-focus al agregar ítem; leyendas de vacío por panel (`copy.empty`); el orden se persiste al Guardar.
 - Spec 004 deroga RF-15 de Spec 002 (se elimina `lastNotePosition`); nota con UUID público (36 con guiones, con reintento ante colisión) y `position` interna por grupo (PINNED/NOT_PINNED/ARCHIVED), no expuesta; alta arriba del grupo; reordenamiento por vecinos `beforeUuid`/`afterUuid` (vacío en extremos) con punto medio entero + renumeración (falta de espacio o no positiva) y desempate por mayor id interno. Cambio de grupo sin adyacencia: a activo arriba; a ARCHIVED conserva `position`, `isPinned=false` y se lista por `createdAt` desc. `PUT` completo (título/contenido/checklist obligatorios; `isPinned` opcional; desarchiva). Vecina malformada → 400; inexistente/ajena → 404.
-- Spec 005 (frontend `features/notes/`): vista única global antes del acordeón (persistida en `localStorage`, defecto card); botón "Nueva nota" texto en `lg+` y FAB circular "+" debajo de `lg` (solo en listado); tarjetas en grid `grid-cols-1 md:repeat(auto-fill,348px)` (móvil fluido, ≥768 fijo 348), fondo `base-200` y `text-xs`; drag&drop con Pointer Events (mouse y táctil), deshabilitado en Archivadas; acciones optimistas + rollback; etiquetas mapeadas por nombre↔id (`GET/POST /tags`); main a `w-full` y `lg:w-[90%]` (sin `max-w-5xl`). Revisión 2: `<p>` del extracto con `whitespace-pre-line` (respeta `ENTER`), checklist recortado muestra fila `...` (muestra `MAX_ITEMS-1` + indicador), editor con contador `N/2500` (`charCount`: contenido o suma de ítems recortados) y sin FAB `+`; en móvil el ancho fluye 367→767 y desde `md` es 348. Revisión 3: `NoteFormValues.checklistItems` es `{text, checked}[]`; `NoteCard` reestructurada (casillas fuera de la región que abre la nota) con `PATCH` optimista + rollback; `NoteEditor` con `key` por uuid para precargar al entrar directo a la ruta de edición. Revisión 4 (T20): `PanelSwitch` segmentado "Notas"/"Archivadas" (default Notas) reemplaza el acordeón; `NoteCard` muestra leyenda "Actualizada: dd/mm/aaaa hh:mm" en el pie y `leading-5` (1.25rem) en contenido y checklist; grid `md:repeat(auto-fit,minmax(348px,1fr))` con tarjeta `md:max-w-[500px]`. Revisión 5 (T21): recordatorio con ícono `ClockIcon`, leyenda de actualización en `0.65rem` y `main` con `w-full` hasta 2560px (`min-[2560px]:w-[90%]`). Revisión 6 (T22): editor con floating labels (`TextField` prop `floating`), labels "Nota"/"Lista", toggles de ícono (lista/pin) con `aria-pressed`, botón SVG cruz (borrar ítem) y más (agregar etiqueta) sin borde, input de ítem solo borde inferior `h-4`; tags de la tarjeta en una línea (`TagList`) con `…` medido por `hasOverflow`. Revisión 7 (T23): editor sin título ni rótulos "Nota"/"Lista" (accesibilidad por `aria-label`); recordatorio inline a la derecha de los botones con `size=25`/`w-[25ch]`; fieldset de lista sin gap; etiquetas a `text-xs` (0.75rem).
+- Spec 005 (frontend `features/notes/`): ciclo completo de notas con vista global, selector Notas/Archivadas, grid responsive, drag&drop táctil, checklist marcable y editor pulido. Revisiones 1–7 archivadas en `docs/memory-archive/2026-10-13-spec-005-revisiones.md`.
+- Revisión 8 (T24-T29): editor con botón de cruz para quitar recordatorio; ítems de checklist como `textarea` auto-ajustable (`text-xs` 0.75rem, fila `min-h-6` 1.5rem, campos internos 1rem, crece hasta 3 líneas con `resizeItemTextarea` y scroll interno); etiquetas movidas a una modal (`TagPicker`) con campo de alta, botón "+" dinámico, chips de seleccionadas fuera y cierre con "x"/click fuera; botón "Nueva nota" centrado en el listado (toggle izq., selector der.).
+- Revisión 10 (T30 005 / T11 003): placeholders neutros `placeholders` en copys, prop `placeholder` en `TextField`/`PasswordInput`, aplicados en editor y auth; limpieza de voseo→neutro (copy.ts, backend 403 y `.opencode/commands/sdd-implement.md`); AGENTS.md explicita "español neutro (sin voseo)".
 
 ## Aprendizajes recientes
 - Los tests de controller con filtros de seguridad requieren usuarios reales o tokens válidos; preferir `@AutoConfigureMockMvc(addFilters = false)` solo cuando no se pruebe seguridad.
@@ -45,6 +43,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - [x] Implementar Spec 003 por tareas (T1-T10).
 - [x] Revisar y alinear longitudes de campos (backend, Spec 002/003 y frontend).
 - [x] Implementar Spec 004 por tareas (T1-T9).
-- [x] Implementar Spec 005 por tareas (T1-T19).
-- [ ] Resolver el orden del checklist (jsonb) — arreglo ordenado o columna `json`.
+- [x] Implementar Spec 005 por tareas (T1-T30, revisiones 1-10); Spec 003 T11 (placeholders auth).
+- [x] Resolver el orden del checklist (jsonb) — arreglo ordenado (Spec 006).
+- [x] Implementar Spec 006 por tareas (T1-T12).
 - [ ] Definir specs de la Fase 2 (documentos, RAG, MCP/LLM).

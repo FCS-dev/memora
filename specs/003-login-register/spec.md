@@ -74,6 +74,7 @@ El backend ya ofrece registro, inicio de sesión, renovación de sesión y cierr
 ### Errores
 
 - RF-29: SI el servicio responde con un error 5xx, no responde o falla la conexión durante el registro o el inicio de sesión, ENTONCES EL SISTEMA debe mostrar un mensaje de error en español y permitir reintentar.
+- RF-30: CUANDO un campo de los formularios de registro o inicio de sesión esté vacío, EL SISTEMA debe mostrar un texto de ayuda (placeholder) en nombre, email, contraseña y confirmación; el texto de ayuda desaparece al escribir o al enfocar el campo.
 
 ## Requisitos no funcionales
 
@@ -143,6 +144,7 @@ El backend ya ofrece registro, inicio de sesión, renovación de sesión y cierr
 - [ ] Con sesión activa, visitar login o registro, incluso con el botón "atrás", redirige a la pantalla de inicio del rol. (RF-27)
 - [ ] Sin sesión, acceder a una pantalla protegida lleva al login. (RF-28)
 - [ ] Los errores 5xx o de conexión muestran un mensaje en español y permiten reintentar. (RF-29)
+- [ ] Los campos vacíos de registro y login muestran un texto de ayuda (placeholder). (RF-30)
 - [ ] Todos los textos visibles están en español neutro. (RNF-1)
 - [ ] Los mensajes de error no exponen datos internos ni contraseñas. (RNF-2)
 - [ ] Las pantallas se usan sin desbordamiento horizontal entre 320 px y 1280 px. (RNF-3)

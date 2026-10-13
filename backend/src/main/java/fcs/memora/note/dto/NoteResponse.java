@@ -1,7 +1,7 @@
 package fcs.memora.note.dto;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 public record NoteResponse(
@@ -9,7 +9,7 @@ public record NoteResponse(
     String title,
     String content,
     boolean checklistMode,
-    Map<String, Boolean> checklistItems,
+    List<ChecklistItem> checklistItems,
     LocalDateTime rememberAt,
     boolean isPinned,
     boolean isArchived,

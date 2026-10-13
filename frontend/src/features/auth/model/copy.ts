@@ -17,6 +17,12 @@ export const authCopy = {
     showPassword: 'Mostrar contraseña',
     hidePassword: 'Ocultar contraseña',
   },
+  placeholders: {
+    name: 'Tu nombre',
+    email: 'nombre@ejemplo.com',
+    password: 'Mínimo 8 caracteres',
+    confirmPassword: 'Repite la contraseña',
+  },
   titles: {
     login: 'Iniciar sesión',
     register: 'Crear cuenta',

@@ -38,6 +38,19 @@ describe('LoginForm', () => {
     vi.unstubAllGlobals()
   })
 
+  it('muestra textos de ayuda en los campos vacíos (RF-30)', () => {
+    renderLoginForm()
+
+    expect(screen.getByLabelText(authCopy.labels.email)).toHaveAttribute(
+      'placeholder',
+      authCopy.placeholders.email,
+    )
+    expect(screen.getByLabelText(authCopy.labels.password)).toHaveAttribute(
+      'placeholder',
+      authCopy.placeholders.password,
+    )
+  })
+
   it('muestra un mensaje genérico ante credenciales inválidas (401)', async () => {
     vi.stubGlobal(
       'fetch',

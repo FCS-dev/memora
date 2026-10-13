@@ -27,6 +27,7 @@ export function LoginForm() {
         autoComplete="email"
         value={values.email}
         onChange={(value) => updateField('email', value)}
+        placeholder={authCopy.placeholders.email}
         disabled={submitting}
       />
 
@@ -36,6 +37,7 @@ export function LoginForm() {
         autoComplete="current-password"
         value={values.password}
         onChange={(value) => updateField('password', value)}
+        placeholder={authCopy.placeholders.password}
         disabled={submitting}
       />
 

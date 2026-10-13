@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildChecklistRecord,
+  buildChecklistPayload,
   buildCreatePayload,
   buildUpdatePayload,
   charCount,
@@ -25,7 +25,8 @@ function values(overrides: Partial<NoteFormValues> = {}): NoteFormValues {
 
 describe('deriveChecklistItems', () => {
   it('separa por líneas, recorta espacios y descarta vacías (RF-15)', () => {
-    expect(deriveChecklistItems('  uno \n\n dos \n   \ntres')).toEqual([
+    const items = deriveChecklistItems('  uno \n\n dos \n   \ntres')
+    expect(items.map((item) => ({ text: item.text, checked: item.checked }))).toEqual([
       { text: 'uno', checked: false },
       { text: 'dos', checked: false },
       { text: 'tres', checked: false },
@@ -109,15 +110,18 @@ describe('charCount', () => {
   })
 })
 
-describe('buildChecklistRecord', () => {
-  it('construye el mapa usando el estado marcado de cada ítem (RF-41)', () => {
+describe('buildChecklistPayload', () => {
+  it('construye la lista ordenada usando el estado marcado y descarta vacíos (RF-41)', () => {
     expect(
-      buildChecklistRecord([
+      buildChecklistPayload([
         { text: 'a', checked: true },
         { text: ' b ', checked: false },
         { text: '   ', checked: true },
       ]),
-    ).toEqual({ a: true, b: false })
+    ).toEqual([
+      { text: 'a', checked: true },
+      { text: ' b ', checked: false },
+    ])
   })
 })
 
@@ -136,17 +140,20 @@ describe('buildCreatePayload', () => {
     })
   })
 
-  it('arma una nota checklist con su mapa de ítems (RF-15)', () => {
+  it('arma una nota checklist con su lista ordenada de ítems (RF-15)', () => {
     const items = [
       { text: 'a', checked: true },
       { text: 'b', checked: false },
     ]
     const payload = buildCreatePayload(
       values({ title: 'T', checklistMode: true, checklistItems: items }),
-      buildChecklistRecord(items),
+      buildChecklistPayload(items),
     )
     expect(payload.content).toBe('')
-    expect(payload.checklistItems).toEqual({ a: true, b: false })
+    expect(payload.checklistItems).toEqual([
+      { text: 'a', checked: true },
+      { text: 'b', checked: false },
+    ])
   })
 })
 

@@ -1,9 +1,10 @@
 package fcs.memora.note.validation;
 
+import fcs.memora.note.dto.ChecklistItem;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-import java.util.Map;
+import java.util.List;
 
 public class ChecklistValidator implements ConstraintValidator<ValidChecklist, Object> {
 
@@ -18,23 +19,23 @@ public class ChecklistValidator implements ConstraintValidator<ValidChecklist, O
             return true;
         }
 
-        Map<String, Boolean> items = payload.checklistItems();
+        List<ChecklistItem> items = payload.checklistItems();
         if (items == null || items.isEmpty()) {
             return false;
         }
 
-        boolean hasNonBlankKey = false;
+        boolean hasNonBlankText = false;
         long totalLength = 0;
-        for (String key : items.keySet()) {
-            if (key == null) {
+        for (ChecklistItem item : items) {
+            if (item == null || item.text() == null) {
                 continue;
             }
-            if (key.trim().length() >= 1) {
-                hasNonBlankKey = true;
+            if (item.text().trim().length() >= 1) {
+                hasNonBlankText = true;
             }
-            totalLength += key.length();
+            totalLength += item.text().length();
         }
 
-        return hasNonBlankKey && totalLength <= MAX_KEYS_LENGTH;
+        return hasNonBlankText && totalLength <= MAX_KEYS_LENGTH;
     }
 }

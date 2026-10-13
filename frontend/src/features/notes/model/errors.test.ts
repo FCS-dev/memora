@@ -26,8 +26,8 @@ describe('mapNotesError', () => {
   })
 
   it('propaga el motivo del servidor en 403 (RF-40)', () => {
-    expect(mapNotesError(new HttpError(403, { detail: 'No tenés permisos' }))).toBe(
-      'No tenés permisos',
+    expect(mapNotesError(new HttpError(403, { detail: 'No tienes permisos' }))).toBe(
+      'No tienes permisos',
     )
   })
 

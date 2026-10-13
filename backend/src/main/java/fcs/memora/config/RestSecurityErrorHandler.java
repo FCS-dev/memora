@@ -30,7 +30,7 @@ public class RestSecurityErrorHandler implements AuthenticationEntryPoint, Acces
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException)
         throws IOException {
-        write(response, HttpStatus.FORBIDDEN, "Prohibido", "No tenés permisos para acceder a este recurso");
+        write(response, HttpStatus.FORBIDDEN, "Prohibido", "No tienes permisos para acceder a este recurso");
     }
 
     private void write(HttpServletResponse response, HttpStatus status, String title, String detail) throws IOException {

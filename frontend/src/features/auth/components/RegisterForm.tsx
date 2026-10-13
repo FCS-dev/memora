@@ -27,6 +27,7 @@ export function RegisterForm() {
         value={values.name}
         onChange={(value) => updateField('name', value)}
         error={errors.name}
+        placeholder={authCopy.placeholders.name}
         disabled={submitting}
       />
 
@@ -38,6 +39,7 @@ export function RegisterForm() {
         value={values.email}
         onChange={(value) => updateField('email', value)}
         error={errors.email}
+        placeholder={authCopy.placeholders.email}
         disabled={submitting}
       />
 
@@ -48,6 +50,7 @@ export function RegisterForm() {
         value={values.password}
         onChange={(value) => updateField('password', value)}
         error={errors.password}
+        placeholder={authCopy.placeholders.password}
         disabled={submitting}
       />
 
@@ -58,6 +61,7 @@ export function RegisterForm() {
         value={values.confirmPassword}
         onChange={(value) => updateField('confirmPassword', value)}
         error={errors.confirmPassword}
+        placeholder={authCopy.placeholders.confirmPassword}
         disabled={submitting}
       />
 

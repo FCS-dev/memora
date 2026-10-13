@@ -23,7 +23,14 @@ const CHECKLIST: Note = {
   uuidNote: 'C',
   title: 'C',
   checklistMode: true,
-  checklistItems: { uno: true, dos: false },
+  checklistItems: [
+    { text: 'uno', checked: true },
+    { text: 'dos', checked: false },
+  ],
+}
+
+function itemChecked(note: Note, text: string): boolean | undefined {
+  return note.checklistItems?.find((item) => item.text === text)?.checked
 }
 
 function json(status: number, body: unknown): Response {
@@ -109,7 +116,13 @@ describe('useNotes', () => {
       vi.fn(async (url: string) => {
         if (url.endsWith('/notes/archived')) return json(200, [])
         if (url.endsWith('/notes/C/checklist'))
-          return json(200, { ...CHECKLIST, checklistItems: { uno: true, dos: true } })
+          return json(200, {
+            ...CHECKLIST,
+            checklistItems: [
+              { text: 'uno', checked: true },
+              { text: 'dos', checked: true },
+            ],
+          })
         if (url.endsWith('/notes')) return json(200, [CHECKLIST])
         return json(404, null)
       }),
@@ -122,7 +135,7 @@ describe('useNotes', () => {
       await result.current.setChecklistItemChecked('C', 'dos', true)
     })
 
-    expect(result.current.notes[0].checklistItems?.dos).toBe(true)
+    expect(itemChecked(result.current.notes[0], 'dos')).toBe(true)
   })
 
   it('revierte el marcado de checklist si el servidor falla (RNF-7)', async () => {
@@ -145,7 +158,7 @@ describe('useNotes', () => {
     })
 
     expect(ok).toBe(false)
-    expect(result.current.notes[0].checklistItems?.dos).toBe(false)
+    expect(itemChecked(result.current.notes[0], 'dos')).toBe(false)
     expect(result.current.error).not.toBeNull()
   })
 })

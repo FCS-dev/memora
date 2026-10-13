@@ -52,7 +52,7 @@ export function NoteCard({
   onHandlePointerDown,
 }: NoteCardProps) {
   const clampClass = viewMode === 'card' ? 'line-clamp-12' : 'line-clamp-2'
-  const items = note.checklistMode ? Object.keys(note.checklistItems ?? {}) : []
+  const items = note.checklistMode ? (note.checklistItems ?? []) : []
   const maxItems = MAX_ITEMS[viewMode]
   const isTruncated = items.length > maxItems
   const visibleItems = items.slice(0, isTruncated ? maxItems - 1 : maxItems)
@@ -94,27 +94,24 @@ export function NoteCard({
 
       {note.checklistMode ? (
         <ul className="mt-1 flex flex-col gap-0.5 leading-5">
-          {visibleItems.map((item) => {
-            const checked = note.checklistItems?.[item] ?? false
-            return (
-              <li key={item} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-xs"
-                  checked={checked}
-                  aria-label={`${notesCopy.labels.checklistItemCheck}: ${item}`}
-                  onChange={(event) => onToggleChecklistItem?.(item, event.target.checked)}
-                />
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 truncate text-left"
-                  onClick={onOpen}
-                >
-                  {item}
-                </button>
-              </li>
-            )
-          })}
+          {visibleItems.map((item) => (
+            <li key={item.text} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-xs"
+                checked={item.checked}
+                aria-label={`${notesCopy.labels.checklistItemCheck}: ${item.text}`}
+                onChange={(event) => onToggleChecklistItem?.(item.text, event.target.checked)}
+              />
+              <button
+                type="button"
+                className="min-w-0 flex-1 truncate text-left"
+                onClick={onOpen}
+              >
+                {item.text}
+              </button>
+            </li>
+          ))}
           {isTruncated ? (
             <li className="text-base-content/70" aria-label={notesCopy.labels.moreItems}>
               ...

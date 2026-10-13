@@ -1,10 +1,12 @@
 package fcs.memora.note.validation;
 
-import java.util.Map;
+import fcs.memora.note.dto.ChecklistItem;
+
+import java.util.List;
 
 public interface ChecklistPayload {
 
     boolean checklistMode();
 
-    Map<String, Boolean> checklistItems();
+    List<ChecklistItem> checklistItems();
 }

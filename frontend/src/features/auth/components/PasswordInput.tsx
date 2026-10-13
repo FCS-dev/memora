@@ -11,6 +11,7 @@ export interface PasswordInputProps {
   autoComplete?: string
   error?: string
   disabled?: boolean
+  placeholder?: string
 }
 
 export function PasswordInput({
@@ -22,6 +23,7 @@ export function PasswordInput({
   autoComplete,
   error,
   disabled,
+  placeholder,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false)
   const errorId = `${id}-error`
@@ -40,6 +42,7 @@ export function PasswordInput({
           onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
           autoComplete={autoComplete}
           disabled={disabled}
+          placeholder={placeholder}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className="input w-full pr-24"

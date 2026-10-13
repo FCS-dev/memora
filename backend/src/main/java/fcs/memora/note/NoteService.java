@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
+import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.NoteResponse;
 import fcs.memora.note.dto.ReorderNoteRequest;
@@ -16,10 +17,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -198,12 +198,19 @@ public class NoteService {
             throw new IllegalArgumentException("La nota no es una checklist");
         }
 
-        Map<String, Boolean> items = new LinkedHashMap<>(fromJson(note.getContentJson()));
-        if (!items.containsKey(item)) {
+        List<ChecklistItem> items = new ArrayList<>(fromJson(note.getContentJson()));
+        int index = -1;
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i).text().equals(item)) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) {
             throw new UsernameNotFoundException("Ítem no encontrado");
         }
 
-        items.put(item, checked);
+        items.set(index, new ChecklistItem(item, checked));
         note.setContentJson(toJson(items));
         return toResponse(noteRepository.saveAndFlush(note));
     }
@@ -275,7 +282,7 @@ public class NoteService {
         return tags;
     }
 
-    private String toJson(Map<String, Boolean> checklistItems) {
+    private String toJson(List<ChecklistItem> checklistItems) {
         if (checklistItems == null) {
             return null;
         }
@@ -286,14 +293,14 @@ public class NoteService {
         }
     }
 
-    private Map<String, Boolean> fromJson(String contentJson) {
+    private List<ChecklistItem> fromJson(String contentJson) {
         if (contentJson == null || contentJson.isBlank()) {
-            return Map.of();
+            return List.of();
         }
         try {
-            return objectMapper.readValue(contentJson, new TypeReference<Map<String, Boolean>>() {});
+            return objectMapper.readValue(contentJson, new TypeReference<List<ChecklistItem>>() {});
         } catch (JsonProcessingException e) {
-            return Map.of();
+            return List.of();
         }
     }
 

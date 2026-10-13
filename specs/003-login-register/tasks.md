@@ -27,3 +27,6 @@
 
 - [x] **T10. E2E manual, responsive y cierre.** RNF-3, casos límite
 - Hecho cuando: contra backend real (`docker compose up -d` + `mvn spring-boot:run`) se verifica auto-login, persistencia/revocación de sesión y ausencia de desbordamiento 320–1280 px; `MEMORY.md` actualizado.
+
+- [x] **T11. Placeholders en login/registro y limpieza de voseo.** RF-30, RNF-1
+- Hecho cuando: los campos vacíos de nombre, email, contraseña y confirmación muestran un texto de ayuda (neutro, sin voseo); los mensajes visibles no usan voseo; tests en verde.

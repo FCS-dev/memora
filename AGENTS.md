@@ -9,7 +9,7 @@ Agenda-memoria informatizada tipo *smart* para gestionar y consultar notas, reco
 - **Backend:** API REST en Java 21 + Spring Boot 4.1.1, Hibernate/JPA, Maven, OpenAPI.
 - **Frontend:** React + TypeScript + Vite, TailwindCSS + DaisyUI, ChartJS.
 - **Base de datos:** PostgreSQL, levantada inicialmente mediante Docker Compose.
-- **Documentación:** español neutro, salvo términos técnicos propios.
+- **Documentación:** español neutro (sin voseo), salvo términos técnicos propios.
 
 ## Estructura
 
@@ -98,7 +98,7 @@ Agenda-memoria informatizada tipo *smart* para gestionar y consultar notas, reco
 - `PascalCase` para clases.
 - `kebab-case` para URLs, CSS y HTML.
 - `UPPER_SNAKE_CASE` para constantes.
-- Texto visible para usuarios, títulos y descripciones en **español neutro**.
+- Texto visible para usuarios, títulos y descripciones en **español neutro (sin voseo)**.
 
 ## Base de datos
 

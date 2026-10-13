@@ -9,7 +9,7 @@ Si se proporciona $2 (ej. tarea1), implementa esa tarea directamente.
 Si no se proporciona $2:
   1. Lee specs/$1/tasks.md.
   2. Encuentra la primera tarea que no esté marcada como hecha (línea que empiece con `- [ ]`).
-  3. Pregunta al usuario: "La siguiente tarea pendiente es <Tarea>. ¿Querés implementar solo esa tarea, implementar todas las tareas pendientes, o cancelar?".
+  3. Pregunta al usuario: "La siguiente tarea pendiente es <Tarea>. ¿Quieres implementar solo esa tarea, implementar todas las tareas pendientes, o cancelar?".
      - Si elige "solo esa tarea": implementa solo esa tarea y después para.
      - Si elige "todas las tareas pendientes": implementa una por una, en orden, marcando cada una como hecha; cada tarea sigue el flujo tests-first; cuando termina la última, para.
      - Si elige "cancelar" o no confirma: párate.

@@ -1,0 +1,11 @@
+# Archivo de memoria — 2026-10-13 — Spec 005, revisiones 1–7
+
+Detalle histórico del bloque de Spec 005 (frontend `features/notes/`), antes de la revisión 8.
+
+- Vista única global antes del acordeón (persistida en `localStorage`, defecto card); botón "Nueva nota" texto en `lg+` y FAB circular "+" debajo de `lg` (solo en listado); tarjetas en grid `grid-cols-1 md:repeat(auto-fill,348px)` (móvil fluido, ≥768 fijo 348), fondo `base-200` y `text-xs`; drag&drop con Pointer Events (mouse y táctil), deshabilitado en Archivadas; acciones optimistas + rollback; etiquetas mapeadas por nombre↔id (`GET/POST /tags`); main a `w-full` y `lg:w-[90%]` (sin `max-w-5xl`).
+- Revisión 2: `<p>` del extracto con `whitespace-pre-line` (respeta `ENTER`), checklist recortado muestra fila `...` (muestra `MAX_ITEMS-1` + indicador), editor con contador `N/2500` (`charCount`: contenido o suma de ítems recortados) y sin FAB `+`; en móvil el ancho fluye 367→767 y desde `md` es 348.
+- Revisión 3: `NoteFormValues.checklistItems` es `{text, checked}[]`; `NoteCard` reestructurada (casillas fuera de la región que abre la nota) con `PATCH` optimista + rollback; `NoteEditor` con `key` por uuid para precargar al entrar directo a la ruta de edición.
+- Revisión 4 (T20): `PanelSwitch` segmentado "Notas"/"Archivadas" (default Notas) reemplaza el acordeón; `NoteCard` muestra leyenda "Actualizada: dd/mm/aaaa hh:mm" en el pie y `leading-5` (1.25rem) en contenido y checklist; grid `md:repeat(auto-fit,minmax(348px,1fr))` con tarjeta `md:max-w-[500px]`.
+- Revisión 5 (T21): recordatorio con ícono `ClockIcon`, leyenda de actualización en `0.65rem` y `main` con `w-full` hasta 2560px (`min-[2560px]:w-[90%]`).
+- Revisión 6 (T22): editor con floating labels (`TextField` prop `floating`), labels "Nota"/"Lista", toggles de ícono (lista/pin) con `aria-pressed`, botón SVG cruz (borrar ítem) y más (agregar etiqueta) sin borde, input de ítem solo borde inferior `h-4`; tags de la tarjeta en una línea (`TagList`) con `…` medido por `hasOverflow`.
+- Revisión 7 (T23): editor sin título ni rótulos "Nota"/"Lista" (accesibilidad por `aria-label`); recordatorio inline a la derecha de los botones con `size=25`/`w-[25ch]`; fieldset de lista sin gap; etiquetas a `text-xs` (0.75rem).

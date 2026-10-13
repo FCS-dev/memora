@@ -48,6 +48,20 @@ describe('RegisterForm', () => {
     vi.unstubAllGlobals()
   })
 
+  it('muestra textos de ayuda en los campos vacíos (RF-30)', () => {
+    renderRegisterForm()
+
+    const expected: Array<[string, string]> = [
+      [authCopy.labels.name, authCopy.placeholders.name],
+      [authCopy.labels.email, authCopy.placeholders.email],
+      [authCopy.labels.password, authCopy.placeholders.password],
+      [authCopy.labels.confirmPassword, authCopy.placeholders.confirmPassword],
+    ]
+    for (const [label, placeholder] of expected) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('placeholder', placeholder)
+    }
+  })
+
   it('muestra errores de campos obligatorios sin llamar a la red (RF-3)', async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith('/auth/refresh')) return json(401, null)

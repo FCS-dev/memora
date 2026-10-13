@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
 import { ErrorAlert } from '../../../shared/components/ErrorAlert'
 import { IconButton } from '../../../shared/components/IconButton'
@@ -7,7 +7,7 @@ import { useNoteEditor } from '../hooks/useNoteEditor'
 import { notesCopy } from '../model/copy'
 import type { CreateNotePayload, Note, Tag, UpdateNotePayload } from '../model/types'
 import { charCount, LIMITS } from '../model/validation'
-import { CrossIcon, ListIcon, PinIcon } from './icons'
+import { CrossIcon, DragHandleIcon, ListIcon, PinIcon } from './icons'
 import { ReminderInput } from './ReminderInput'
 import { TagPicker } from './TagPicker'
 
@@ -19,6 +19,16 @@ export interface NoteEditorProps {
   onCancel: () => void
 }
 
+const ITEM_MAX_LINES = 3
+const ITEM_LINE_HEIGHT = 16
+
+function resizeItemTextarea(element: HTMLTextAreaElement | null) {
+  if (!element) return
+  element.style.height = 'auto'
+  const maxHeight = ITEM_MAX_LINES * ITEM_LINE_HEIGHT
+  element.style.height = `${Math.min(Math.max(element.scrollHeight, ITEM_LINE_HEIGHT), maxHeight)}px`
+}
+
 export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEditorProps) {
   const tagIdsByName = useMemo(
     () => Object.fromEntries(tags.map((tag) => [tag.tagName, tag.id])),
@@ -26,11 +36,75 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
   )
   const editor = useNoteEditor(note, tagIdsByName, onSave)
   const { values, errors } = editor
+  const { moveChecklistItem } = editor
   const [saveError, setSaveError] = useState<string | null>(null)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [overIndex, setOverIndex] = useState<number | null>(null)
+  const dragRef = useRef<number | null>(null)
+  const overRef = useRef<number | null>(null)
+  const itemInputRefs = useRef<(HTMLTextAreaElement | null)[]>([])
+  const focusLastRef = useRef(false)
 
   const usedChars = charCount(values)
   const overLimit = usedChars > LIMITS.contentMax
+
+  useEffect(() => {
+    dragRef.current = dragIndex
+  }, [dragIndex])
+
+  useEffect(() => {
+    overRef.current = overIndex
+  }, [overIndex])
+
+  useEffect(() => {
+    if (!focusLastRef.current) return
+    focusLastRef.current = false
+    const lastIndex = values.checklistItems.length - 1
+    itemInputRefs.current[lastIndex]?.focus()
+  }, [values.checklistItems.length])
+
+  useEffect(() => {
+    values.checklistItems.forEach((_, index) => resizeItemTextarea(itemInputRefs.current[index]))
+  }, [values.checklistItems])
+
+  useEffect(() => {
+    if (dragIndex === null) return
+
+    function findTargetIndex(clientX: number, clientY: number): number | null {
+      const element = document.elementFromPoint(clientX, clientY)
+      const row = (element as HTMLElement | null)?.closest('[data-checklist-index]') as HTMLElement | null
+      if (!row) return null
+      const index = Number(row.dataset.checklistIndex)
+      return Number.isNaN(index) ? null : index
+    }
+
+    function handleMove(event: PointerEvent) {
+      const index = findTargetIndex(event.clientX, event.clientY)
+      if (index !== null) {
+        setOverIndex(index)
+      }
+    }
+
+    function handleEnd(event: PointerEvent) {
+      const from = dragRef.current
+      const to = findTargetIndex(event.clientX, event.clientY) ?? overRef.current
+      if (from !== null && to !== null) {
+        moveChecklistItem(from, to)
+      }
+      setDragIndex(null)
+      setOverIndex(null)
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleEnd)
+    window.addEventListener('pointercancel', handleEnd)
+    return () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleEnd)
+      window.removeEventListener('pointercancel', handleEnd)
+    }
+  }, [dragIndex, moveChecklistItem])
 
   async function handleSave() {
     setSaveError(null)
@@ -73,6 +147,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
         value={values.title}
         onChange={(value) => editor.update({ title: value })}
         error={errors.title}
+        placeholder={notesCopy.placeholders.title}
         floating
       />
 
@@ -104,30 +179,76 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
       {values.checklistMode ? (
         <fieldset className="flex flex-col" aria-label={notesCopy.labels.checklistItems}>
           {values.checklistItems.map((item, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div
+              key={item.clientId}
+              data-checklist-index={index}
+              className={`flex min-h-6 items-center gap-1 text-xs ${
+                dragIndex !== null && overIndex === index ? 'bg-base-200' : ''
+              } ${dragIndex === index ? 'opacity-50' : ''}`}
+              onKeyDown={(event) => {
+                if (
+                  (event.ctrlKey || event.metaKey) &&
+                  (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+                ) {
+                  event.preventDefault()
+                  const toIndex = event.key === 'ArrowUp' ? index - 1 : index + 1
+                  if (toIndex >= 0 && toIndex < values.checklistItems.length) {
+                    moveChecklistItem(index, toIndex)
+                  }
+                }
+              }}
+            >
+              <span
+                role="button"
+                tabIndex={-1}
+                aria-label={notesCopy.labels.dragHandle}
+                className="flex cursor-grab touch-none select-none items-center px-0.5 [&_svg]:size-3.5"
+                onPointerDown={(event) => {
+                  event.preventDefault()
+                  setDragIndex(index)
+                }}
+              >
+                <DragHandleIcon />
+              </span>
               <input
                 type="checkbox"
-                className="checkbox"
+                className="checkbox checkbox-xs"
                 checked={item.checked}
                 aria-label={`${notesCopy.labels.checklistItemCheck} ${index + 1}`}
                 onChange={() => editor.toggleChecklistItemChecked(index)}
               />
-              <input
-                type="text"
-                className="input h-4 w-full rounded-none border-x-0 border-t-0 px-1"
+              <textarea
+                ref={(element) => {
+                  itemInputRefs.current[index] = element
+                  resizeItemTextarea(element)
+                }}
+                rows={1}
+                className="min-h-4 max-h-12 w-full resize-none overflow-y-auto rounded-none border-x-0 border-t-0 border-b border-base-300 bg-transparent px-1 py-0 text-xs leading-4 focus:border-primary focus:outline-none"
                 aria-label={`${notesCopy.labels.checklistItems} ${index + 1}`}
+                placeholder={notesCopy.placeholders.checklistItem}
                 value={item.text}
-                onChange={(event) => editor.setChecklistItem(index, event.target.value)}
+                onChange={(event) => {
+                  editor.setChecklistItem(index, event.target.value)
+                  resizeItemTextarea(event.target)
+                }}
               />
               <IconButton
                 label={notesCopy.actions.delete}
+                className="h-4 min-h-0 w-4 p-0 [&_svg]:size-3.5"
                 onClick={() => editor.removeChecklistItem(index)}
               >
                 <CrossIcon />
               </IconButton>
             </div>
           ))}
-          <button type="button" className="btn btn-sm" onClick={() => editor.addChecklistItem()}>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => {
+              focusLastRef.current = true
+              editor.addChecklistItem()
+            }}
+          >
             {notesCopy.actions.addItem}
           </button>
           <p
@@ -148,6 +269,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
             id="note-content"
             aria-label={notesCopy.labels.content}
             className="textarea textarea-bordered w-full"
+            placeholder={notesCopy.placeholders.content}
             value={values.content}
             onChange={(event) => editor.update({ content: event.target.value })}
           />

@@ -16,12 +16,16 @@ export const LIMITS = {
   tagMax: 25,
 } as const
 
+function generateClientId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
 export function deriveChecklistItems(raw: string): ChecklistItemForm[] {
   return raw
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .map((text) => ({ text, checked: false }))
+    .map((text) => ({ clientId: generateClientId(), text, checked: false }))
 }
 
 export function isNoteEmpty(values: NoteFormValues): boolean {
@@ -61,14 +65,10 @@ export function validateNoteForm(values: NoteFormValues): FormErrors {
   return errors
 }
 
-export function buildChecklistRecord(items: ChecklistItemForm[]): Record<string, boolean> {
-  const record: Record<string, boolean> = {}
-  for (const item of items) {
-    const key = item.text.trim()
-    if (key.length === 0) continue
-    record[key] = item.checked
-  }
-  return record
+export function buildChecklistPayload(items: ChecklistItemForm[]): ChecklistItemForm[] {
+  return items
+    .filter((item) => item.text.trim().length > 0)
+    .map((item) => ({ text: item.text, checked: item.checked }))
 }
 
 function toRememberAt(value: string): string | null {
@@ -77,7 +77,7 @@ function toRememberAt(value: string): string | null {
 
 export function buildCreatePayload(
   values: NoteFormValues,
-  checklistItems: Record<string, boolean> | null,
+  checklistItems: ChecklistItemForm[] | null,
 ): CreateNotePayload {
   return {
     title: values.title.trim(),
@@ -93,7 +93,7 @@ export function buildCreatePayload(
 
 export function buildUpdatePayload(
   values: NoteFormValues,
-  checklistItems: Record<string, boolean> | null,
+  checklistItems: ChecklistItemForm[] | null,
 ): UpdateNotePayload {
   return {
     title: values.title.trim(),
@@ -118,13 +118,17 @@ export function emptyFormValues(): NoteFormValues {
   }
 }
 
+export function newChecklistItem(text = '', checked = false): ChecklistItemForm {
+  return { clientId: generateClientId(), text, checked }
+}
+
 export function noteToFormValues(note: Note, tagIdsByName: Record<string, number>): NoteFormValues {
   return {
     title: note.title,
     content: note.checklistMode ? '' : note.content,
     checklistMode: note.checklistMode,
     checklistItems: note.checklistMode
-      ? Object.entries(note.checklistItems ?? {}).map(([text, checked]) => ({ text, checked }))
+      ? (note.checklistItems ?? []).map((item) => ({ clientId: generateClientId(), text: item.text, checked: item.checked }))
       : [],
     tagIds: note.tags
       .map((name) => tagIdsByName[name])

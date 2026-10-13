@@ -34,4 +34,27 @@ describe('TextField', () => {
     expect(input).not.toHaveAttribute('aria-describedby')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('aplica el placeholder indicado (RF-30, RF-55)', () => {
+    render(
+      <TextField
+        id="email"
+        label="Correo electrónico"
+        value=""
+        onChange={() => {}}
+        placeholder="nombre@ejemplo.com"
+      />,
+    )
+
+    expect(screen.getByLabelText('Correo electrónico')).toHaveAttribute(
+      'placeholder',
+      'nombre@ejemplo.com',
+    )
+  })
+
+  it('usa un espacio como placeholder cuando es floating sin placeholder explícito', () => {
+    render(<TextField id="title" label="Título" value="" onChange={() => {}} floating />)
+
+    expect(screen.getByLabelText('Título')).toHaveAttribute('placeholder', ' ')
+  })
 })

@@ -2,6 +2,7 @@ package fcs.memora.validation;
 
 import fcs.memora.auth.dto.LoginRequest;
 import fcs.memora.auth.dto.RegisterRequest;
+import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.CreateTagRequest;
 import fcs.memora.user.dto.UpdateNameRequest;
@@ -9,7 +10,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.Validation;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -94,24 +95,24 @@ class FieldLengthValidationTest {
     @Test
     void checklistIsIgnoredWhenModeIsFalse() {
         assertThat(validator.validate(note("t", "c", false, null))).isEmpty();
-        assertThat(validator.validate(note("t", "c", false, Map.of("a", true)))).isEmpty();
+        assertThat(validator.validate(note("t", "c", false, List.of(new ChecklistItem("a", true))))).isEmpty();
     }
 
     @Test
     void checklistModeRequiresAtLeastOneNonBlankItem() {
         assertThat(validator.validate(note("t", "", true, null))).isNotEmpty();
-        assertThat(validator.validate(note("t", "", true, Map.of()))).isNotEmpty();
-        assertThat(validator.validate(note("t", "", true, Map.of("   ", true)))).isNotEmpty();
-        assertThat(validator.validate(note("t", "", true, Map.of("item", true)))).isEmpty();
+        assertThat(validator.validate(note("t", "", true, List.of()))).isNotEmpty();
+        assertThat(validator.validate(note("t", "", true, List.of(new ChecklistItem("   ", true))))).isNotEmpty();
+        assertThat(validator.validate(note("t", "", true, List.of(new ChecklistItem("item", true))))).isEmpty();
     }
 
     @Test
     void checklistKeysSumMustNotExceedLimit() {
-        assertThat(validator.validate(note("t", "", true, Map.of("a".repeat(2500), true)))).isEmpty();
-        assertThat(validator.validate(note("t", "", true, Map.of("a".repeat(2501), true)))).isNotEmpty();
+        assertThat(validator.validate(note("t", "", true, List.of(new ChecklistItem("a".repeat(2500), true))))).isEmpty();
+        assertThat(validator.validate(note("t", "", true, List.of(new ChecklistItem("a".repeat(2501), true))))).isNotEmpty();
     }
 
-    private CreateNoteRequest note(String title, String content, boolean checklistMode, Map<String, Boolean> items) {
+    private CreateNoteRequest note(String title, String content, boolean checklistMode, List<ChecklistItem> items) {
         return new CreateNoteRequest(title, content, checklistMode, items, null, false, false, Set.of());
     }
 }

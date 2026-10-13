@@ -6,10 +6,11 @@ import { IconButton } from '../../../shared/components/IconButton'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
 import { NoteCard } from './NoteCard'
 import { TagList } from './TagList'
+import { TagPicker } from './TagPicker'
 import { hasOverflow } from '../model/tags'
 import { ViewModeToggle } from './ViewModeToggle'
 import { notesCopy } from '../model/copy'
-import type { Note } from '../model/types'
+import type { Note, Tag } from '../model/types'
 
 function note(overrides: Partial<Note> = {}): Note {
   return {
@@ -167,7 +168,10 @@ describe('NoteCard', () => {
       note: note({
         checklistMode: true,
         content: '',
-        checklistItems: { uno: true, dos: false },
+        checklistItems: [
+          { text: 'uno', checked: true },
+          { text: 'dos', checked: false },
+        ],
       }),
     })
     const article = screen.getByText('Nota').closest('article')!
@@ -179,7 +183,11 @@ describe('NoteCard', () => {
       note: note({
         checklistMode: true,
         content: '',
-        checklistItems: { uno: true, dos: false, tres: false },
+        checklistItems: [
+          { text: 'uno', checked: true },
+          { text: 'dos', checked: false },
+          { text: 'tres', checked: false },
+        ],
       }),
     })
     expect(screen.getByText('uno')).toBeInTheDocument()
@@ -193,7 +201,10 @@ describe('NoteCard', () => {
       note: note({
         checklistMode: true,
         content: '',
-        checklistItems: { uno: true, dos: false },
+        checklistItems: [
+          { text: 'uno', checked: true },
+          { text: 'dos', checked: false },
+        ],
       }),
     })
     expect(screen.getByText('dos')).toBeInTheDocument()
@@ -209,7 +220,10 @@ describe('NoteCard', () => {
       note: note({
         checklistMode: true,
         content: '',
-        checklistItems: { uno: true, dos: false },
+        checklistItems: [
+          { text: 'uno', checked: true },
+          { text: 'dos', checked: false },
+        ],
       }),
     })
 
@@ -249,6 +263,56 @@ describe('NoteCard', () => {
 
     await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.moveUp }))
     expect(onMoveUp).toHaveBeenCalledOnce()
+  })
+})
+
+describe('TagPicker', () => {
+  const tags: Tag[] = [
+    { id: 1, tagName: 'trabajo' },
+    { id: 2, tagName: 'casa' },
+  ]
+
+  it('abre la modal, muestra las casillas y las seleccionadas como chips (RF-53)', async () => {
+    render(
+      <TagPicker id="t" tags={tags} selectedIds={[1]} onChange={noop} onCreate={vi.fn()} />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))
+    expect(screen.getByRole('dialog', { name: notesCopy.labels.tags })).toBeInTheDocument()
+    expect(screen.getByLabelText(notesCopy.labels.newTag)).toHaveAttribute(
+      'placeholder',
+      notesCopy.placeholders.newTag,
+    )
+
+    const checkboxes = screen.getAllByRole('checkbox')
+    expect(checkboxes).toHaveLength(2)
+    expect(checkboxes[0]).toBeChecked()
+    expect(checkboxes[1]).not.toBeChecked()
+  })
+
+  it('muestra el botón "+" solo al escribir y agrega la nueva etiqueta (RF-53)', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<TagPicker id="t" tags={tags} selectedIds={[]} onChange={noop} onCreate={onCreate} />)
+
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))
+    expect(screen.queryByRole('button', { name: notesCopy.actions.addTag })).not.toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText(notesCopy.labels.newTag), 'nueva')
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.addTag }))
+
+    expect(onCreate).toHaveBeenCalledWith('nueva')
+  })
+
+  it('cierra la modal con "x" y al hacer click fuera (RF-53)', async () => {
+    render(<TagPicker id="t" tags={tags} selectedIds={[]} onChange={noop} onCreate={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))
+    await userEvent.click(screen.getAllByRole('button', { name: notesCopy.actions.close })[0])
+    expect(screen.queryByRole('dialog', { name: notesCopy.labels.tags })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))
+    await userEvent.click(screen.getAllByRole('button', { name: notesCopy.actions.close })[1])
+    expect(screen.queryByRole('dialog', { name: notesCopy.labels.tags })).not.toBeInTheDocument()
   })
 })
 

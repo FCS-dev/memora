@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-            .body(buildErrorResponse("Prohibido", 403, "No tenés permisos para acceder a este recurso"));
+            .body(buildErrorResponse("Prohibido", 403, "No tienes permisos para acceder a este recurso"));
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)

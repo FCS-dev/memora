@@ -19,6 +19,8 @@ export interface NotesPanelProps {
   viewMode: ViewMode
   loading: boolean
   error: string | null
+  emptyTitle?: string
+  emptyMessage?: string
   onRetry: () => void
   onOpen: (note: Note) => void
   onTogglePin: (note: Note) => void
@@ -40,6 +42,8 @@ export function NotesPanel({
   viewMode,
   loading,
   error,
+  emptyTitle,
+  emptyMessage,
   onRetry,
   onOpen,
   onTogglePin,
@@ -137,7 +141,12 @@ export function NotesPanel({
   }
 
   if (total === 0) {
-    return null
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+        {emptyTitle ? <p className="text-lg font-medium">{emptyTitle}</p> : null}
+        {emptyMessage ? <p className="text-base-content/70">{emptyMessage}</p> : null}
+      </div>
+    )
   }
 
   return (

@@ -118,11 +118,17 @@ export function useNotes(): UseNotesResult {
     (uuidNote: string, item: string, checked: boolean) =>
       run(
         (current) =>
-          current.map((note) =>
-            note.uuidNote === uuidNote && note.checklistItems
-              ? { ...note, checklistItems: { ...note.checklistItems, [item]: checked } }
-              : note,
-          ),
+          current.map((note) => {
+            if (note.uuidNote !== uuidNote || !note.checklistItems) {
+              return note
+            }
+            return {
+              ...note,
+              checklistItems: note.checklistItems.map((checklistItem) =>
+                checklistItem.text === item ? { ...checklistItem, checked } : checklistItem,
+              ),
+            }
+          }),
         () => notesApi.updateChecklistItem(uuidNote, item, checked),
       ),
     [run],

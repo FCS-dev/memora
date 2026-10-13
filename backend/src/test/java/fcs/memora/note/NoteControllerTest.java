@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fcs.memora.auth.JwtService;
 import fcs.memora.auth.PasswordService;
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
+import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.ReorderNoteRequest;
 import fcs.memora.note.dto.UpdateChecklistItemRequest;
@@ -31,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -84,7 +85,7 @@ class NoteControllerTest {
         return objectMapper.readTree(response).get("uuidNote").asText();
     }
 
-    private String createChecklistNote(String token, Map<String, Boolean> items) throws Exception {
+    private String createChecklistNote(String token, List<ChecklistItem> items) throws Exception {
         CreateNoteRequest request = new CreateNoteRequest(
             "Checklist", "", true, items, null, false, false, null);
         String response = mockMvc.perform(post("/notes")
@@ -114,7 +115,7 @@ class NoteControllerTest {
     void shouldCreateChecklistNote() throws Exception {
         String token = createUserToken();
         CreateNoteRequest request = new CreateNoteRequest(
-            "Checklist", "ignored", true, Map.of("task1", false), null, false, false, null);
+            "Checklist", "ignored", true, List.of(new ChecklistItem("task1", false)), null, false, false, null);
 
         mockMvc.perform(post("/notes")
                 .header("Authorization", "Bearer " + token)
@@ -122,7 +123,8 @@ class NoteControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.checklistMode").value(true))
-            .andExpect(jsonPath("$.checklistItems.task1").value(false));
+            .andExpect(jsonPath("$.checklistItems[0].text").value("task1"))
+            .andExpect(jsonPath("$.checklistItems[0].checked").value(false));
     }
 
     @Test
@@ -259,22 +261,24 @@ class NoteControllerTest {
     @Test
     void shouldMarkChecklistItem() throws Exception {
         String token = createUserToken();
-        String uuid = createChecklistNote(token, Map.of("task1", false, "task2", false));
+        String uuid = createChecklistNote(token, List.of(new ChecklistItem("task1", false), new ChecklistItem("task2", false)));
 
         mockMvc.perform(patch("/notes/" + uuid + "/checklist")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new UpdateChecklistItemRequest("task1", true))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.checklistItems.task1").value(true))
-            .andExpect(jsonPath("$.checklistItems.task2").value(false))
+            .andExpect(jsonPath("$.checklistItems[0].text").value("task1"))
+            .andExpect(jsonPath("$.checklistItems[0].checked").value(true))
+            .andExpect(jsonPath("$.checklistItems[1].text").value("task2"))
+            .andExpect(jsonPath("$.checklistItems[1].checked").value(false))
             .andExpect(jsonPath("$.position").doesNotExist());
     }
 
     @Test
     void shouldMarkChecklistItemIdempotently() throws Exception {
         String token = createUserToken();
-        String uuid = createChecklistNote(token, Map.of("task1", false));
+        String uuid = createChecklistNote(token, List.of(new ChecklistItem("task1", false)));
 
         UpdateChecklistItemRequest request = new UpdateChecklistItemRequest("task1", true);
 
@@ -289,13 +293,14 @@ class NoteControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.checklistItems.task1").value(true));
+            .andExpect(jsonPath("$.checklistItems[0].text").value("task1"))
+            .andExpect(jsonPath("$.checklistItems[0].checked").value(true));
     }
 
     @Test
     void shouldReturnNotFoundWhenChecklistItemDoesNotExist() throws Exception {
         String token = createUserToken();
-        String uuid = createChecklistNote(token, Map.of("task1", false));
+        String uuid = createChecklistNote(token, List.of(new ChecklistItem("task1", false)));
 
         mockMvc.perform(patch("/notes/" + uuid + "/checklist")
                 .header("Authorization", "Bearer " + token)
@@ -327,7 +332,7 @@ class NoteControllerTest {
             .userStatus(UserStatus.ACTIVE)
             .build());
         String ownerToken = jwtService.generateAccessToken(owner);
-        String uuid = createChecklistNote(ownerToken, Map.of("task1", false));
+        String uuid = createChecklistNote(ownerToken, List.of(new ChecklistItem("task1", false)));
 
         String otherToken = createUserToken();
 
@@ -346,7 +351,7 @@ class NoteControllerTest {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                    new CreateNoteRequest("Checklist", "", true, Map.of("task1", false), null, false, false, null))))
+                    new CreateNoteRequest("Checklist", "", true, List.of(new ChecklistItem("task1", false)), null, false, false, null))))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getContentAsString();
         String uuid = objectMapper.readTree(createdJson).get("uuidNote").asText();
@@ -366,7 +371,7 @@ class NoteControllerTest {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                    new UpdateNoteRequest("Changed", "", true, Map.of("task1", true), null, false, null))))
+                    new UpdateNoteRequest("Changed", "", true, List.of(new ChecklistItem("task1", true)), null, false, null))))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
         LocalDateTime afterUpdate = LocalDateTime.parse(objectMapper.readTree(updatedJson).get("updatedAt").asText());

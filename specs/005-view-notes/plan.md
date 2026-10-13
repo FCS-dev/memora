@@ -34,12 +34,12 @@
 - `notes/components/ViewModeToggle.tsx` — alterna card/lista (control global). (RF-4, RF-7)
 - `notes/components/NoteCard.tsx` — tarjeta card/lista con `bg-base-200` y `text-xs`, extracto (`line-clamp-12`/`line-clamp-2`, texto con `whitespace-pre-line` y `leading-5`), checklist (`leading-5`), indicador "..." cuando el checklist se recorta, leyenda de última actualización, **casillas de checklist habilitadas fuera de la región que abre la nota** (evita interactivos anidados), etiquetas, recordatorio, controles y asa con **Pointer Events**. (RF-3, RF-5, RF-6, RF-8, RF-23, RF-24, RF-25, RF-26, RF-35, RF-38, RF-42, RF-43)
 - `notes/components/NoteControls.tsx` — íconos fijar/desfijar, archivar/restaurar, eliminar, arrastrar. (RF-19, RF-25, RF-27, RF-28, RF-29)
-- `notes/components/NoteEditor.tsx` — formulario editable: título, texto/checklist con casillas marcables, etiquetas, recordatorio, fijada; derivación por líneas y contador `N/2500`. (RF-12..RF-18, RF-21, RF-22, RF-36, RF-41)
-- `notes/components/TagPicker.tsx` — seleccionar existentes y crear nueva. (RF-16, RF-33)
-- `notes/components/ReminderInput.tsx` — fecha/hora. (RF-17)
+- `notes/components/NoteEditor.tsx` — formulario editable: título, texto/checklist con casillas marcables, etiquetas, recordatorio, fijada; derivación por líneas y contador `N/2500`; ítem del checklist en fila base 1.5rem con `textarea` auto-ajustable (alto base 1rem, hasta 3 líneas) y tipografía 0.75rem; textos de ayuda (placeholder) en los campos vacíos. (RF-12..RF-18, RF-21, RF-22, RF-36, RF-41, RF-49, RF-52, RF-55)
+- `notes/components/TagPicker.tsx` — botón que abre la modal de etiquetas: campo de alta con "+" dinámico (con placeholder), casillas de las disponibles, chips de las seleccionadas y cierre con "x"/click fuera. (RF-16, RF-33, RF-53, RF-55)
+- `notes/components/ReminderInput.tsx` — fecha/hora con botón de cruz para quitarla cuando hay valor. (RF-17, RF-51)
 - `shared/components/ConfirmDialog.tsx` (nuevo) — confirmación de eliminar y de salir con cambios. (RF-14, RF-19)
 - `shared/components/IconButton.tsx` (nuevo) — botón con ícono accesible. (RNF-2)
-- `notes/pages/NotesPage.tsx` — compone el encabezado (vista + selector de panel) y el editor; incluye el botón "Nueva nota" (texto en `lg+`, FAB circular con "+" en `<lg`) solo en la pantalla de listado. (RF-1, RF-2, RF-4, RF-12, RF-37)
+- `notes/pages/NotesPage.tsx` — compone el encabezado (vista + selector de panel) y el editor; incluye el botón "Nueva nota" (texto en `lg+`, centrado, y FAB circular con "+" en `<lg`) solo en la pantalla de listado. (RF-1, RF-2, RF-4, RF-12, RF-37, RF-54)
 
 ### Rutas / integración
 - `app/routing.ts` — agrega rutas de notas del usuario. (RF-30)
@@ -148,6 +148,8 @@ SESION:
 10. **Mapeo nombre↔id de etiquetas** con `GET /tags`, porque la respuesta trae nombres y el request pide ids. Alternativa descartada: cambiar el contrato del backend (fuera de esta spec).
 11. **Ancho de tarjeta por breakpoint**: una sola columna fluida en móvil (`grid-cols-1`) y, desde `md`, `repeat(auto-fit,minmax(348px,500px))` (columnas según las notas del grupo, tope 500px, salto a más filas). Alternativa descartada: forzar `N` columnas rígidas (impide el wrap). (RF-39)
 12. **Indicador "..." del checklist recortado** con una fila muted que reemplaza al último ítem visible (mantiene el límite de líneas), más el recorte CSS del texto (`line-clamp`). Alternativa descartada: medición en runtime del desborde (dependiente del render, más compleja). (RF-38)
+13. **Ítem del checklist como `textarea` auto-ajustable** (`rows=1`, alto recalculado con `scrollHeight` acotado a 3 líneas). Alternativa descartada: `<input>` de una línea (no muestra textos largos) o `contenteditable` (accesibilidad y control más complejos). (RF-52)
+14. **Etiquetas en modal con chips de seleccionadas fuera**. Alternativa descartada: mantener la lista de casillas siempre visible (la pide el requisito dentro de la modal) o un desplegable sin casillas (pierde el marcado múltiple). (RF-53)
 
 ## 6. Estrategia de tests (Vitest + Testing Library, jsdom)
 
@@ -156,9 +158,9 @@ SESION:
 - **`PanelSwitch`**: default "Notas" y alternancia con "Archivadas"; `NotesPage` muestra el panel activo. (RF-1, RF-2, RF-4)
 - **`NotesPanel`**: carga, error con reintento, sección vacía y disposición en grid. (RF-9, RF-10, RF-11)
 - **`NoteCard`**: extracto card/lista, checklist contado, controles, atajos de teclado, fondo `base-200`, `text-xs`, texto con `whitespace-pre-line` (saltos de línea) e indicador "..." del checklist recortado; Archivadas sin arrastre. (RF-3, RF-5, RF-6, RF-8, RF-23..RF-26, RF-35, RF-38)
-- **`NoteEditor`**: precarga, toggle de checklist y derivación, contador `N/2500`, validaciones, salida con cambios, guardar. (RF-12..RF-18, RF-21, RF-22, RF-36)
-- **`TagPicker`**: crear etiqueta al instante y error por duplicado. (RF-16, RF-33)
-- **`NotesPage` (integración, api mockeada)**: carga por grupos, fijar/desfijar, archivar/restaurar, eliminar con confirmación, reordenar optimista + rollback, FAB en móvil solo en listado y reorden táctil. (RF-1, RF-3, RF-4, RF-19, RF-20, RF-23, RF-27..RF-29, RF-37, RNF-7)
+- **`NoteEditor`**: precarga, toggle de checklist y derivación, contador `N/2500`, validaciones, salida con cambios, guardar; ítem del checklist como `textarea` con `text-xs`, `min-h-4` y `max-h-12`; quitar recordatorio. (RF-12..RF-18, RF-21, RF-22, RF-36, RF-49, RF-51, RF-52)
+- **`TagPicker`**: crear etiqueta al instante y error por duplicado; modal con "+" dinámico, marca de la nueva y cierre con "x"/click fuera. (RF-16, RF-33, RF-53)
+- **`NotesPage` (integración, api mockeada)**: carga por grupos, fijar/desfijar, archivar/restaurar, eliminar con confirmación, reordenar optimista + rollback, FAB en móvil solo en listado, botón "Nueva nota" centrado y reorden táctil. (RF-1, RF-3, RF-4, RF-19, RF-20, RF-23, RF-27..RF-29, RF-37, RF-54, RNF-7)
 - **`App`/routing**: guardas y acceso a notas solo con rol USER; redirección sin sesión. (RF-30)
 - **`http`**: reintento único tras 401 y redirección si falla. (RF-31)
 - Comandos: `npm run test`, `npm run lint`, `npm run build`.
@@ -196,6 +198,11 @@ SESION:
 | RF-40 | `errors.mapNotesError`, `shared/lib/http` (`onUnauthorized`), `AuthProvider` |
 | RF-41 | `types`/`validation`, `useNoteEditor`, `NoteEditor` |
 | RF-42 | `notesApi.updateChecklistItem`, `useNotes.setChecklistItemChecked`, `NoteCard` |
+| RF-49, RF-52 | `NoteEditor` (ítem `textarea` auto-ajustable, 0.75rem, fila base 1.5rem, máx 3 líneas) |
+| RF-51 | `ReminderInput` (botón de cruz) |
+| RF-53 | `TagPicker` (modal de etiquetas) |
+| RF-54 | `NotesPage` (botón "Nueva nota" centrado) |
+| RF-55 | `TextField`/`PasswordInput` (prop `placeholder`), `NoteEditor`, `TagPicker`, `copy.ts` |
 | RNF-1 | clases responsive (`sm/md/lg/xl`) |
 | RNF-2 | componentes semánticos, foco, `ConfirmDialog`, atajos |
 | RNF-3 | `validation` + revalidación backend |

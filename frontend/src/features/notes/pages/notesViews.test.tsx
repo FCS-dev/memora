@@ -93,16 +93,52 @@ describe('NotesPanel', () => {
     expect(onRetry).toHaveBeenCalledOnce()
   })
 
-  it('no muestra nada en una sección vacía (RF-10)', () => {
-    const { container } = render(
+  it('muestra la leyenda cuando el panel principal está vacío (RF-10)', () => {
+    render(
       <NotesPanel
         {...base}
         loading={false}
         error={null}
-        sections={[{ id: 's', title: 'S', notes: [], reorderEnabled: true }]}
+        emptyTitle={notesCopy.empty.notesTitle}
+        emptyMessage={notesCopy.empty.notesMessage}
+        sections={[
+          { id: 'pinned', title: 'Fijadas', notes: [], reorderEnabled: true },
+          { id: 'others', title: 'Otras', notes: [], reorderEnabled: true },
+        ]}
       />,
     )
-    expect(container).toBeEmptyDOMElement()
+    expect(screen.getByText(notesCopy.empty.notesTitle)).toBeInTheDocument()
+    expect(screen.getByText(notesCopy.empty.notesMessage)).toBeInTheDocument()
+  })
+
+  it('muestra la leyenda cuando el panel de archivadas está vacío (RF-11)', () => {
+    render(
+      <NotesPanel
+        {...base}
+        loading={false}
+        error={null}
+        emptyTitle={notesCopy.empty.archivedTitle}
+        emptyMessage={notesCopy.empty.archivedMessage}
+        sections={[{ id: 'archived', title: '', notes: [], reorderEnabled: false }]}
+      />,
+    )
+    expect(screen.getByText(notesCopy.empty.archivedTitle)).toBeInTheDocument()
+    expect(screen.getByText(notesCopy.empty.archivedMessage)).toBeInTheDocument()
+  })
+
+  it('no muestra la leyenda cuando hay notas (RF-12)', () => {
+    render(
+      <NotesPanel
+        {...base}
+        loading={false}
+        error={null}
+        emptyTitle={notesCopy.empty.notesTitle}
+        emptyMessage={notesCopy.empty.notesMessage}
+        sections={[{ id: 'others', title: 'Otras', notes: [note('N1', 'Mi nota')], reorderEnabled: true }]}
+      />,
+    )
+    expect(screen.getByText('Mi nota')).toBeInTheDocument()
+    expect(screen.queryByText(notesCopy.empty.notesTitle)).not.toBeInTheDocument()
   })
 })
 
@@ -150,16 +186,45 @@ describe('NotesPage (listado)', () => {
     )
   })
 
+  it('muestra la leyenda de vacío cuando no hay notas (RF-10)', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/tags')) return json(200, [])
+      if (url.endsWith('/notes/archived')) return json(200, [])
+      if (url.endsWith('/notes')) return json(200, [])
+      return json(404, null)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderWithAuth(
+      <MemoryRouter initialEntries={['/home']}>
+        <Routes>
+          <Route path="/home" element={<NotesPage mode="list" />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText(notesCopy.empty.notesTitle)).toBeInTheDocument()
+  })
+
   it('marca un ítem de checklist con PATCH sin abrir la nota (RF-42)', async () => {
     const checklist = note('C1', 'Lista', {
       checklistMode: true,
-      checklistItems: { casa: false, pasto: false },
+      checklistItems: [
+        { text: 'casa', checked: false },
+        { text: 'pasto', checked: false },
+      ],
     })
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith('/tags')) return json(200, [])
       if (url.endsWith('/notes/archived')) return json(200, [])
       if (url.endsWith('/notes/C1/checklist'))
-        return json(200, { ...checklist, checklistItems: { casa: true, pasto: false } })
+        return json(200, {
+          ...checklist,
+          checklistItems: [
+            { text: 'casa', checked: true },
+            { text: 'pasto', checked: false },
+          ],
+        })
       if (url.endsWith('/notes')) return json(200, [checklist])
       return json(404, null)
     })
@@ -191,7 +256,7 @@ describe('NotesPage (listado)', () => {
   it('precarga la nota al abrir la ruta de edición (RF-12)', async () => {
     const checklist = note('C1', 'Lista', {
       checklistMode: true,
-      checklistItems: { casa: true },
+      checklistItems: [{ text: 'casa', checked: true }],
     })
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith('/tags')) return json(200, [])
@@ -239,6 +304,29 @@ describe('NotesPage (listado)', () => {
 
     expect(await screen.findByText('Mi archivada')).toBeInTheDocument()
     expect(screen.queryByText('Mi nota')).not.toBeInTheDocument()
+  })
+
+  it('centra el botón "Nueva nota" en el listado (RF-54)', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/tags')) return json(200, [])
+      if (url.endsWith('/notes/archived')) return json(200, [])
+      if (url.endsWith('/notes')) return json(200, [note('N', 'Mi nota')])
+      return json(404, null)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderWithAuth(
+      <MemoryRouter initialEntries={['/home']}>
+        <Routes>
+          <Route path="/home" element={<NotesPage mode="list" />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByText('Mi nota')
+    const buttons = screen.getAllByRole('button', { name: notesCopy.actions.newNote })
+    expect(buttons[0].className).toContain('left-1/2')
+    expect(buttons[0].className).toContain('-translate-x-1/2')
   })
 
   it('usa ancho 100% por debajo de 2560px y 90% desde 2560px (RF-44)', async () => {
