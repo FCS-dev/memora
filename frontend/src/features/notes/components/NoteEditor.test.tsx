@@ -135,8 +135,8 @@ describe('NoteEditor', () => {
   })
 
   it('crea una etiqueta desde la nota (RF-16)', async () => {
-    const tag: Tag = { id: 5, tagName: 'casa' }
-    const onCreateTag = vi.fn().mockResolvedValue(tag)
+    const tag: Tag = { id: 5, tagName: 'casa', global: false }
+    const onCreateTag = vi.fn().mockResolvedValue({ tag, reused: false })
     renderEditor({ onCreateTag })
 
     await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))
@@ -149,7 +149,7 @@ describe('NoteEditor', () => {
   it('informa el error de etiqueta duplicada (RF-33)', async () => {
     const onCreateTag = vi
       .fn()
-      .mockRejectedValue(new HttpError(400, { detail: 'El tag ya existe' }))
+      .mockRejectedValue(new HttpError(409, { detail: 'El tag ya existe' }))
     renderEditor({ onCreateTag })
 
     await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))

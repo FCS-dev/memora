@@ -11,8 +11,8 @@ describe('mapNotesError', () => {
     expect(mapNotesError(new HttpError(404, null))).toBe(notesCopy.errors.notFound)
   })
 
-  it('detecta etiqueta duplicada en 400 (RF-33)', () => {
-    expect(mapNotesError(new HttpError(400, { detail: 'El tag ya existe' }))).toBe(
+  it('detecta etiqueta duplicada en 409 (RF-33)', () => {
+    expect(mapNotesError(new HttpError(409, { detail: 'El tag ya existe' }))).toBe(
       notesCopy.errors.duplicateTag,
     )
   })

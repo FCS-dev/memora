@@ -1,6 +1,7 @@
 package fcs.memora.note;
 
 import fcs.memora.note.dto.CreateTagRequest;
+import fcs.memora.note.dto.CreateTagResponse;
 import fcs.memora.note.dto.TagResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,10 +31,13 @@ public class TagController {
 
     @PostMapping
     @Operation(summary = "Crear una nueva etiqueta")
-    public ResponseEntity<TagResponse> create(
+    public ResponseEntity<CreateTagResponse> create(
         @AuthenticationPrincipal UserDetails userDetails,
         @Valid @RequestBody CreateTagRequest request) {
-        TagResponse response = tagService.create(userDetails.getUsername(), request);
+        CreateTagResponse response = tagService.create(userDetails.getUsername(), request);
+        if (response.reused()) {
+            return ResponseEntity.ok(response);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

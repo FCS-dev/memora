@@ -18,7 +18,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Refresh token incluye `jti` UUID para evitar duplicados por unique constraint.
 - `GlobalExceptionHandler` mapea `UsernameNotFoundException` a 404.
 - `SecurityConfig` usa `RestSecurityErrorHandler`: sin token/token expirado → 401 JSON; rol insuficiente → 403 JSON; `JwtAuthenticationFilter` no lanza con token inválido. Frontend: `http` renueva en 401 y `setUnauthorizedHandler` cierra sesión si el refresh falla; `mapNotesError` propaga el `detail` del servidor.
-- ADMIN no accede a notas/tags; `/notes/**` y `/tags/**` restringidos a USER.
+- ADMIN no accede a notas/tags; `/notes/**` y `/tags/**` restringidos a USER. Spec 007 (implementada): las etiquetas globales son las de la cuenta ADMIN (dueño por rol, sin notas); ADMIN las gestiona desde `/admin/tags`, no ve notas ni privadas ajenas.
 - OpenAPI/SpringDoc expone `/v3/api-docs` y `/swagger-ui/index.html`.
 - Spec 003: validación FE contraseña 8–20, nombre/email 150; auto-login encadenado registro+login; sesión hasta logout o 30 días de inactividad; mensaje específico para BLOCKED/DISABLED.
 - Plan 003: React Router + access token en memoria (refresh por cookie HttpOnly), proxy Vite `/api`→`:8080`, `fetch` nativo, Context para sesión, tests con Vitest + Testing Library; refresh *single-flight* por pestaña.
@@ -34,7 +34,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 ## Aprendizajes recientes
 - Los tests de controller con filtros de seguridad requieren usuarios reales o tokens válidos; preferir `@AutoConfigureMockMvc(addFilters = false)` solo cuando no se pruebe seguridad.
 - `mvn test` debe correr SIN `.env`: `JWT_SECRET` del entorno pisa `jwt.secret` del perfil test y rompe `JwtPropertiesTest`.
-- PostgreSQL `jsonb` reordena las claves por longitud: el checklist `{texto:bool}` cambia de orden al editar un ítem. Decisión pendiente (arreglo ordenado vs columna `json`).
+- PostgreSQL `jsonb` reordena las claves por longitud: por eso el checklist se guarda como arreglo ordenado `[{text,checked}]` (Spec 006).
 - `ddl-auto: update` agrega `uuid_note` pero no elimina columnas; la columna legacy `last_note_position` (NOT NULL) rompía el registro en la BD de dev y se eliminó a mano (`ALTER TABLE users DROP COLUMN`). Conviene migraciones (Flyway).
 
 ## Próximos pasos
@@ -44,6 +44,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - [x] Revisar y alinear longitudes de campos (backend, Spec 002/003 y frontend).
 - [x] Implementar Spec 004 por tareas (T1-T9).
 - [x] Implementar Spec 005 por tareas (T1-T30, revisiones 1-10); Spec 003 T11 (placeholders auth).
-- [x] Resolver el orden del checklist (jsonb) — arreglo ordenado (Spec 006).
 - [x] Implementar Spec 006 por tareas (T1-T12).
+- [x] Aprobar Spec 007 (etiquetas globales = tags del ADMIN, sin notas; + unicidad): `spec.md` aprobada (RF 1-23) y `plan.md` aprobado. Dueño del catálogo por rol ADMIN (no `id=1`), unicidad BD `(user_id,tag_name)` + regla de servicio (gana global), 409 para duplicados, sin dependencias nuevas (script `007-conform-tags.sql`).
+- [x] Implementar Spec 007 por tareas (T1-T10): globales=tags del ADMIN, unicidad BD `(user_id,tag_name)`, 409 duplicados, `/admin/tags` + panel admin y picker con badge/aviso, script `007-conform-tags.sql`.
 - [ ] Definir specs de la Fase 2 (documentos, RAG, MCP/LLM).

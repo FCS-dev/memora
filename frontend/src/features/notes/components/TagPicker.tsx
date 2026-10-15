@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { IconButton } from '../../../shared/components/IconButton'
 import { mapNotesError } from '../model/errors'
 import { notesCopy } from '../model/copy'
-import type { Tag } from '../model/types'
+import type { CreateTagResult, Tag } from '../model/types'
 import { CrossIcon, PlusIcon } from './icons'
 
 export interface TagPickerProps {
@@ -10,13 +10,14 @@ export interface TagPickerProps {
   tags: Tag[]
   selectedIds: number[]
   onChange: (ids: number[]) => void
-  onCreate: (name: string) => Promise<void>
+  onCreate: (name: string) => Promise<CreateTagResult>
 }
 
 export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPickerProps) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const selectedTags = tags.filter((tag) => selectedIds.includes(tag.id))
@@ -36,9 +37,14 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
     }
     setBusy(true)
     setError(null)
+    setNotice(null)
     try {
-      await onCreate(trimmed)
+      const result = await onCreate(trimmed)
       setName('')
+      setNotice(result.reused ? notesCopy.notices.reusedTag : null)
+      if (!selectedIds.includes(result.tag.id)) {
+        onChange([...selectedIds, result.tag.id])
+      }
     } catch (createError) {
       setError(mapNotesError(createError))
     } finally {
@@ -80,6 +86,7 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
                 label={notesCopy.actions.close}
                 onClick={() => {
                   setError(null)
+                  setNotice(null)
                   setOpen(false)
                 }}
               >
@@ -117,6 +124,12 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
               </p>
             ) : null}
 
+            {notice ? (
+              <p role="status" className="text-info text-sm">
+                {notice}
+              </p>
+            ) : null}
+
             <fieldset
               className="flex max-h-64 flex-col gap-1 overflow-y-auto"
               aria-label={notesCopy.labels.tags}
@@ -130,7 +143,12 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
                       checked={selectedIds.includes(tag.id)}
                       onChange={() => toggle(tag.id)}
                     />
-                    <span>{tag.tagName}</span>
+                    <span className="flex items-center gap-1">
+                      {tag.tagName}
+                      {tag.global ? (
+                        <span className="badge badge-sm">{notesCopy.labels.global}</span>
+                      ) : null}
+                    </span>
                   </label>
                 ))
               ) : (

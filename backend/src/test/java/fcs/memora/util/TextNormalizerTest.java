@@ -21,4 +21,44 @@ class TextNormalizerTest {
         assertThat(TextNormalizer.normalizeTagName("WORK"))
             .isEqualTo("work");
     }
+
+    @Test
+    void shouldCollapseInternalWhitespaceInTagName() {
+        assertThat(TextNormalizer.normalizeTagName("casa    grande"))
+            .isEqualTo("casa grande");
+        assertThat(TextNormalizer.normalizeTagName("casa\t\ngrande"))
+            .isEqualTo("casa grande");
+        assertThat(TextNormalizer.normalizeTagName("  casa   grande  "))
+            .isEqualTo("casa grande");
+    }
+
+    @Test
+    void shouldApplyNfcToTagName() {
+        String composed = "caf\u00e9";      // café
+        String decomposed = "cafe\u0301";   // cafe + combining acute
+        assertThat(TextNormalizer.normalizeTagName(decomposed))
+            .isEqualTo(TextNormalizer.normalizeTagName(composed));
+    }
+
+    @Test
+    void shouldTreatAccentsAsDifferent() {
+        assertThat(TextNormalizer.normalizeTagName("s\u00e1bana"))
+            .isNotEqualTo(TextNormalizer.normalizeTagName("sabana"));
+    }
+
+    @Test
+    void shouldLowercaseWithLocaleRoot() {
+        assertThat(TextNormalizer.normalizeTagName("IMPORTANT"))
+            .isEqualTo("important");
+    }
+
+    @Test
+    void shouldValidateTagName() {
+        assertThat(TextNormalizer.isValidTagName("a", 25)).isTrue();
+        assertThat(TextNormalizer.isValidTagName("a".repeat(25), 25)).isTrue();
+        assertThat(TextNormalizer.isValidTagName("a".repeat(26), 25)).isFalse();
+        assertThat(TextNormalizer.isValidTagName("", 25)).isFalse();
+        assertThat(TextNormalizer.isValidTagName("   ", 25)).isFalse();
+        assertThat(TextNormalizer.isValidTagName(null, 25)).isFalse();
+    }
 }

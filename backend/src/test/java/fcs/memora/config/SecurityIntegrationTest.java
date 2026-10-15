@@ -111,6 +111,31 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void shouldRejectTagsEndpointWithAdminToken() throws Exception {
+        User admin = userRepository.save(User.builder()
+            .uuidUser("admin-uuid")
+            .email("admin@example.com")
+            .name("Admin")
+            .passwordHash(passwordService.hashPassword("password123"))
+            .role(UserRole.ADMIN)
+            .userStatus(UserStatus.ACTIVE)
+            .build());
+        String token = jwtService.generateAccessToken(admin);
+
+        mockMvc.perform(get("/tags")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
+    void shouldRequireAuthForAdminTags() throws Exception {
+        mockMvc.perform(get("/admin/tags"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
     void shouldAllowUserAccessToOwnNotes() throws Exception {
         User user = userRepository.save(User.builder()
             .uuidUser("user-uuid")

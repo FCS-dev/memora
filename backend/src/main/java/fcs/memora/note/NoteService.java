@@ -3,6 +3,7 @@ package fcs.memora.note;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fcs.memora.admin.TagOwnerResolver;
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
@@ -33,12 +34,15 @@ public class NoteService {
     private final NoteRepository noteRepository;
     private final TagRepository tagRepository;
     private final UserRepository userRepository;
+    private final TagOwnerResolver tagOwnerResolver;
     private final ObjectMapper objectMapper;
 
-    public NoteService(NoteRepository noteRepository, TagRepository tagRepository, UserRepository userRepository) {
+    public NoteService(NoteRepository noteRepository, TagRepository tagRepository, UserRepository userRepository,
+                       TagOwnerResolver tagOwnerResolver) {
         this.noteRepository = noteRepository;
         this.tagRepository = tagRepository;
         this.userRepository = userRepository;
+        this.tagOwnerResolver = tagOwnerResolver;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -276,7 +280,11 @@ public class NoteService {
             return new HashSet<>();
         }
         Set<Tag> tags = new HashSet<>(tagRepository.findAllById(tagIds));
-        if (tags.stream().anyMatch(tag -> !tag.getUser().getId().equals(user.getId()))) {
+        Long ownerId = tagOwnerResolver.catalogOwner().map(owner -> owner.getId()).orElse(null);
+        boolean hasForeignTag = tags.stream().anyMatch(tag ->
+            !tag.getUser().getId().equals(user.getId())
+                && (ownerId == null || !tag.getUser().getId().equals(ownerId)));
+        if (hasForeignTag) {
             throw new IllegalArgumentException("Uno o más tags no pertenecen al usuario");
         }
         return tags;

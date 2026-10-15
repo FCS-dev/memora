@@ -10,6 +10,15 @@ RUN_BACKEND=true
 RUN_FRONTEND=true
 WAIT_FOR_BACKEND=true
 
+port_in_use() {
+  local port="$1"
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltn "sport = :$port" 2>/dev/null | grep -q LISTEN
+  else
+    (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && { exec 3>&- 3<&-; return 0; } || return 1
+  fi
+}
+
 usage() {
   cat <<EOF
 Uso: $(basename "$0") [OPCIONES]
@@ -48,26 +57,36 @@ cd "$PROJECT_DIR"
 
 BACKEND_PID=""
 FRONTEND_PID=""
+CLEANUP_DONE=false
 
 cleanup() {
-  echo ""
-  echo "==> Deteniendo servicios..."
-
-  if [[ -n "$FRONTEND_PID" ]]; then
-    kill "$FRONTEND_PID" 2>/dev/null || true
-    wait "$FRONTEND_PID" 2>/dev/null || true
+  if [[ "$CLEANUP_DONE" == true ]]; then
+    return 0
   fi
+  CLEANUP_DONE=true
 
-  if [[ -n "$BACKEND_PID" ]]; then
-    kill "$BACKEND_PID" 2>/dev/null || true
-    wait "$BACKEND_PID" 2>/dev/null || true
+  if [[ -n "$FRONTEND_PID" || -n "$BACKEND_PID" ]]; then
+    echo ""
+    echo "==> Deteniendo servicios..."
+
+    if [[ -n "$FRONTEND_PID" ]]; then
+      pkill -P "$FRONTEND_PID" 2>/dev/null || true
+      kill "$FRONTEND_PID" 2>/dev/null || true
+      wait "$FRONTEND_PID" 2>/dev/null || true
+    fi
+
+    if [[ -n "$BACKEND_PID" ]]; then
+      kill "$BACKEND_PID" 2>/dev/null || true
+      wait "$BACKEND_PID" 2>/dev/null || true
+    fi
+
+    echo "==> Servicios detenidos."
   fi
-
-  echo "==> Servicios detenidos."
-  exit 0
 }
 
-trap cleanup INT TERM EXIT
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 if [[ "$RUN_DB" == true ]]; then
   echo "==> Levantando PostgreSQL..."
@@ -100,6 +119,13 @@ if [[ "$RUN_BACKEND" == true ]]; then
     exit 1
   fi
 
+  SERVER_PORT="${SERVER_PORT:-8080}"
+  if port_in_use "$SERVER_PORT"; then
+    echo "ERROR: el puerto $SERVER_PORT ya está en uso (¿hay otra instancia corriendo?)." >&2
+    echo "       Ejecuta scripts/stop-dev.sh y vuelve a intentar." >&2
+    exit 1
+  fi
+
   echo "==> Iniciando backend desde $JAR_FILE..."
   java -jar "$JAR_FILE" &
   BACKEND_PID=$!
@@ -110,6 +136,10 @@ if [[ "$RUN_BACKEND" == true ]]; then
     SERVER_PORT="${SERVER_PORT:-8080}"
     echo "==> Esperando backend en http://localhost:$SERVER_PORT ..."
     for _ in $(seq 1 60); do
+      if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+        echo "ERROR: el backend terminó durante el arranque. Revisa el log anterior." >&2
+        exit 1
+      fi
       if curl -fsS "http://localhost:$SERVER_PORT/v3/api-docs" >/dev/null 2>&1; then
         echo "==> Backend responde."
         break

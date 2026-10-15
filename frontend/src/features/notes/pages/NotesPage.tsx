@@ -67,9 +67,11 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
   )
 
   const handleCreateTag = useCallback(async (name: string) => {
-    const tag = await createTag(name)
-    setTags((prev) => [...prev, tag])
-    return tag
+    const result = await createTag(name)
+    setTags((prev) =>
+      prev.some((tag) => tag.id === result.tag.id) ? prev : [...prev, result.tag],
+    )
+    return result
   }, [])
 
   const handleTogglePin = useCallback(

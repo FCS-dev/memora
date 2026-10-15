@@ -100,6 +100,28 @@ class NoteRepositoryTest {
         assertThat(noteRepository.findByUuidNoteAndUser(saved.getUuidNote(), other)).isEmpty();
     }
 
+    @Test
+    void shouldCountDistinctNotesPerTagIncludingArchived() {
+        User user = userRepository.save(user("noteuser7123456789012345678901234", "note7@example.com"));
+        Tag tag = tagRepository.save(Tag.builder().user(user).tagName("work").build());
+
+        Note active = note(user, "Active", 100000L, false, false);
+        active.setTags(Set.of(tag));
+        noteRepository.save(active);
+
+        Note archived = note(user, "Archived", 200000L, false, true);
+        archived.setTags(Set.of(tag));
+        noteRepository.save(archived);
+
+        noteRepository.save(note(user, "NoTag", 300000L, false, false));
+
+        List<TagUsageCount> counts = noteRepository.countNotesByTagIds(List.of(tag.getId()));
+
+        assertThat(counts).hasSize(1);
+        assertThat(counts.get(0).tagId()).isEqualTo(tag.getId());
+        assertThat(counts.get(0).total()).isEqualTo(2L);
+    }
+
     private Note note(User user, String title, long position, boolean isPinned, boolean isArchived) {
         return Note.builder()
             .uuidNote(UUID.randomUUID().toString())

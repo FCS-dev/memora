@@ -13,10 +13,13 @@ public class AdminService {
 
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
+    private final TagOwnerResolver tagOwnerResolver;
 
-    public AdminService(UserRepository userRepository, RefreshTokenService refreshTokenService) {
+    public AdminService(UserRepository userRepository, RefreshTokenService refreshTokenService,
+                        TagOwnerResolver tagOwnerResolver) {
         this.userRepository = userRepository;
         this.refreshTokenService = refreshTokenService;
+        this.tagOwnerResolver = tagOwnerResolver;
     }
 
     @Transactional
@@ -27,6 +30,13 @@ public class AdminService {
 
         User user = userRepository.findByUuidUser(targetUuid)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        boolean isCatalogOwner = tagOwnerResolver.catalogOwner()
+            .map(owner -> owner.getId().equals(user.getId()))
+            .orElse(false);
+        if (isCatalogOwner) {
+            throw new IllegalArgumentException("No se puede modificar el estado de la cuenta administradora del catálogo");
+        }
 
         UserStatus newStatus = request.status();
         user.setUserStatus(newStatus);

@@ -1,5 +1,7 @@
 package fcs.memora.config;
 
+import fcs.memora.note.exception.DuplicateTagException;
+import fcs.memora.note.exception.InvalidTagException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,6 +31,17 @@ public class GlobalExceptionHandler {
         });
 
         return ResponseEntity.badRequest().body(buildErrorResponse("Solicitud inválida", 400, errors.toString()));
+    }
+
+    @ExceptionHandler(InvalidTagException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidTag(InvalidTagException ex) {
+        return ResponseEntity.badRequest().body(buildErrorResponse("Solicitud inválida", 400, ex.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateTagException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicateTag(DuplicateTagException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(buildErrorResponse("Conflicto", 409, ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

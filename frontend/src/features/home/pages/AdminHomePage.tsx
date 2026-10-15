@@ -1,3 +1,4 @@
+import { GlobalTagsPanel } from '../../admin/components/GlobalTagsPanel'
 import { useAuth } from '../../auth/context/useAuth'
 import { authCopy } from '../../auth/model/copy'
 import { HomeHeader } from '../components/HomeHeader'
@@ -12,6 +13,9 @@ export function AdminHomePage() {
         userName={user?.name ?? ''}
         onLogout={() => void signOut()}
       />
+      <main>
+        <GlobalTagsPanel />
+      </main>
     </div>
   )
 }

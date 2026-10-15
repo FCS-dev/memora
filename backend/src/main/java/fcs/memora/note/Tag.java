@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,7 +25,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "tags")
+@Table(
+    name = "tags",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_tags_owner_name",
+        columnNames = {"user_id", "tag_name"}
+    )
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

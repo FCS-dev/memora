@@ -43,6 +43,7 @@ export const notesCopy = {
     tags: 'Etiquetas',
     newTag: 'Nueva etiqueta',
     noTags: 'No hay etiquetas todavía',
+    global: 'Global',
     reminder: 'Recordatorio',
     updatedAt: 'Actualizada',
     pinned: 'Fijada',
@@ -58,6 +59,9 @@ export const notesCopy = {
   states: {
     loading: 'Cargando notas',
     saving: 'Guardando',
+  },
+  notices: {
+    reusedTag: 'Se reutilizó una etiqueta global existente',
   },
   empty: {
     notesTitle: 'No tienes notas',

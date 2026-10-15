@@ -5,7 +5,7 @@ import { IconButton } from '../../../shared/components/IconButton'
 import { TextField } from '../../../shared/components/TextField'
 import { useNoteEditor } from '../hooks/useNoteEditor'
 import { notesCopy } from '../model/copy'
-import type { CreateNotePayload, Note, Tag, UpdateNotePayload } from '../model/types'
+import type { CreateNotePayload, CreateTagResult, Note, Tag, UpdateNotePayload } from '../model/types'
 import { charCount, LIMITS } from '../model/validation'
 import { CrossIcon, DragHandleIcon, ListIcon, PinIcon } from './icons'
 import { ReminderInput } from './ReminderInput'
@@ -15,7 +15,7 @@ export interface NoteEditorProps {
   note: Note | null
   tags: Tag[]
   onSave: (payload: CreateNotePayload | UpdateNotePayload) => Promise<void>
-  onCreateTag: (name: string) => Promise<Tag>
+  onCreateTag: (name: string) => Promise<CreateTagResult>
   onCancel: () => void
 }
 
@@ -116,11 +116,6 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
     if (result.status === 'error') {
       setSaveError(result.message)
     }
-  }
-
-  async function handleCreateTag(name: string) {
-    const tag = await onCreateTag(name)
-    editor.update({ tagIds: [...values.tagIds, tag.id] })
   }
 
   function handleCancel() {
@@ -292,7 +287,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
         tags={tags}
         selectedIds={values.tagIds}
         onChange={(ids) => editor.update({ tagIds: ids })}
-        onCreate={handleCreateTag}
+        onCreate={onCreateTag}
       />
 
       <div className="flex justify-end gap-2">

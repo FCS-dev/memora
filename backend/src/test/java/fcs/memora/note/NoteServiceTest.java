@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fcs.memora.admin.TagOwnerResolver;
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
@@ -29,6 +30,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
@@ -48,8 +50,60 @@ class NoteServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private TagOwnerResolver tagOwnerResolver;
+
     @InjectMocks
     private NoteService noteService;
+
+    @Test
+    void shouldResolveOwnAndGlobalTagsOnCreate() {
+        User user = user();
+        User admin = User.builder()
+            .id(2L)
+            .uuidUser("admin-uuid")
+            .email("admin@example.com")
+            .name("Admin")
+            .passwordHash("hashedPassword")
+            .role(UserRole.ADMIN)
+            .userStatus(UserStatus.ACTIVE)
+            .build();
+        Tag ownTag = Tag.builder().id(1L).user(user).tagName("personal").build();
+        Tag globalTag = Tag.builder().id(9L).user(admin).tagName("work").build();
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(tagOwnerResolver.catalogOwner()).thenReturn(Optional.of(admin));
+        when(tagRepository.findAllById(any())).thenReturn(List.of(ownTag, globalTag));
+        when(noteRepository.maxPosition(user, false, false)).thenReturn(Optional.empty());
+        when(noteRepository.existsByUuidNote(any())).thenReturn(false);
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        NoteResponse response = noteService.create("uuid",
+            new CreateNoteRequest("Title", "Content", false, null, null, false, false, Set.of(1L, 9L)));
+
+        assertThat(response.tags()).containsExactlyInAnyOrder("personal", "work");
+    }
+
+    @Test
+    void shouldRejectTagFromAnotherUser() {
+        User user = user();
+        User other = User.builder()
+            .id(3L)
+            .uuidUser("other-uuid")
+            .email("other@example.com")
+            .name("Other")
+            .passwordHash("hashedPassword")
+            .role(UserRole.USER)
+            .userStatus(UserStatus.ACTIVE)
+            .build();
+        Tag foreign = Tag.builder().id(5L).user(other).tagName("secret").build();
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(tagOwnerResolver.catalogOwner()).thenReturn(Optional.empty());
+        when(tagRepository.findAllById(any())).thenReturn(List.of(foreign));
+
+        assertThatThrownBy(() -> noteService.create("uuid",
+            new CreateNoteRequest("Title", "Content", false, null, null, false, false, Set.of(5L))))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test
     void shouldCreateNotPinnedNoteAtTop() {

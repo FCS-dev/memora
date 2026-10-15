@@ -21,6 +21,12 @@ export interface Note {
 export interface Tag {
   id: number
   tagName: string
+  global: boolean
+}
+
+export interface CreateTagResult {
+  tag: Tag
+  reused: boolean
 }
 
 export interface ChecklistItemForm {

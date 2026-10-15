@@ -8,6 +8,13 @@ import { AuthContext } from '../../auth/context/authContext'
 import type { AuthContextValue } from '../../auth/context/authContext'
 import { authCopy } from '../../auth/model/copy'
 
+vi.mock('../../admin/api/adminTagsApi', () => ({
+  listGlobalTags: vi.fn().mockResolvedValue([]),
+  createGlobalTag: vi.fn(),
+  renameGlobalTag: vi.fn(),
+  deleteGlobalTag: vi.fn(),
+}))
+
 function makeAuthValue(role: 'USER' | 'ADMIN'): AuthContextValue {
   return {
     status: 'authenticated',

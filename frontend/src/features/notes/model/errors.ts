@@ -1,11 +1,6 @@
 import { HttpError, NetworkError } from '../../../shared/lib/http'
 import { notesCopy } from './copy'
 
-function detailOf(body: unknown): string {
-  const detail = serverDetail(body)
-  return detail === null ? '' : detail.toLowerCase()
-}
-
 function serverDetail(body: unknown): string | null {
   if (body && typeof body === 'object' && 'detail' in body) {
     const detail = (body as { detail?: unknown }).detail
@@ -17,11 +12,7 @@ function serverDetail(body: unknown): string | null {
 }
 
 export function isDuplicateTagError(error: unknown): boolean {
-  return (
-    error instanceof HttpError &&
-    error.status === 400 &&
-    detailOf(error.body).includes('tag')
-  )
+  return error instanceof HttpError && error.status === 409
 }
 
 export function mapNotesError(error: unknown): string {

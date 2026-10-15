@@ -29,8 +29,31 @@ class AdminServiceTest {
     @Mock
     private RefreshTokenService refreshTokenService;
 
+    @Mock
+    private TagOwnerResolver tagOwnerResolver;
+
     @InjectMocks
     private AdminService adminService;
+
+    @Test
+    void shouldPreventChangingCatalogOwnerStatus() {
+        User owner = User.builder()
+            .id(2L)
+            .uuidUser("owner-uuid")
+            .email("owner@example.com")
+            .name("Owner")
+            .passwordHash("hashedPassword")
+            .role(UserRole.ADMIN)
+            .userStatus(UserStatus.ACTIVE)
+            .build();
+        when(userRepository.findByUuidUser("owner-uuid")).thenReturn(Optional.of(owner));
+        when(tagOwnerResolver.catalogOwner()).thenReturn(Optional.of(owner));
+
+        assertThatThrownBy(() -> adminService.updateStatus("actor-uuid", "owner-uuid",
+            new UpdateStatusRequest(UserStatus.DISABLED)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("catálogo");
+    }
 
     @Test
     void shouldUpdateStatusToBlockedAndRevokeTokens() {

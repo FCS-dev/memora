@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,8 +23,14 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 
     List<Note> findByUserAndIsPinnedAndIsArchivedOrderByPositionDescIdDesc(User user, boolean isPinned, boolean isArchived);
 
+    List<Note> findByTags_Id(Long tagId);
+
     @Query("select max(n.position) from Note n where n.user = :user and n.isPinned = :isPinned and n.isArchived = :isArchived")
     Optional<Long> maxPosition(@Param("user") User user, @Param("isPinned") boolean isPinned, @Param("isArchived") boolean isArchived);
+
+    @Query("select new fcs.memora.note.TagUsageCount(t.id, count(distinct n)) "
+        + "from Note n join n.tags t where t.id in :ids group by t.id")
+    List<TagUsageCount> countNotesByTagIds(@Param("ids") Collection<Long> ids);
 
     long countByUser(User user);
 }

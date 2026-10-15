@@ -15,4 +15,10 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     Optional<Tag> findByUserAndTagNameIgnoreCase(User user, String tagName);
 
     boolean existsByUserAndTagNameIgnoreCase(User user, String tagName);
+
+    Optional<Tag> findByUserAndTagName(User user, String tagName);
+
+    List<Tag> findByTagName(String tagName);
+
+    List<Tag> findByTagNameAndUserNot(String tagName, User user);
 }

@@ -10,7 +10,9 @@ echo "==> Deteniendo contenedor PostgreSQL..."
 docker compose down
 
 echo "==> Deteniendo procesos de desarrollo..."
-pkill -f "java -jar.*memora-backend" 2>/dev/null || true
-pkill -f "npx vite" 2>/dev/null || true
+pkill -f "memora-backend-.*\.jar" 2>/dev/null || true
+pkill -f "frontend/node_modules/.bin/vite" 2>/dev/null || true
+pkill -f "npm exec vite" 2>/dev/null || true
+pkill -f "sh -c vite" 2>/dev/null || true
 
 echo "==> Entorno detenido."
