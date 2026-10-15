@@ -7,6 +7,7 @@ import { UserHomePage } from './UserHomePage'
 import { AuthContext } from '../../auth/context/authContext'
 import type { AuthContextValue } from '../../auth/context/authContext'
 import { authCopy } from '../../auth/model/copy'
+import { accountCopy } from '../../account/model/copy'
 
 vi.mock('../../admin/api/adminTagsApi', () => ({
   listGlobalTags: vi.fn().mockResolvedValue([]),
@@ -22,6 +23,7 @@ function makeAuthValue(role: 'USER' | 'ADMIN'): AuthContextValue {
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),
+    applyProfile: vi.fn(),
   }
 }
 
@@ -43,11 +45,12 @@ describe('páginas de inicio', () => {
     expect(screen.getByRole('heading', { name: authCopy.titles.adminHome })).toBeInTheDocument()
   })
 
-  it('cierra la sesión al pulsar el botón (RF-21, RF-22)', async () => {
+  it('cierra la sesión desde el menú de usuario (RF-16)', async () => {
     const value = makeAuthValue('USER')
     renderWithAuth(<UserHomePage />, value)
 
-    await userEvent.click(screen.getByRole('button', { name: authCopy.actions.logout }))
+    await userEvent.click(screen.getByRole('button', { name: accountCopy.menu.trigger }))
+    await userEvent.click(screen.getByRole('menuitem', { name: accountCopy.menu.logout }))
 
     expect(value.signOut).toHaveBeenCalledOnce()
   })

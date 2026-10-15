@@ -22,6 +22,16 @@ export interface Tag {
   id: number
   tagName: string
   global: boolean
+  noteCount: number
+}
+
+export interface RenameTagPayload {
+  tagName: string
+}
+
+export interface NotesFilter {
+  reminderOnly: boolean
+  tagIds: number[]
 }
 
 export interface CreateTagResult {

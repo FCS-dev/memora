@@ -50,6 +50,14 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
   const overLimit = usedChars > LIMITS.contentMax
 
   useEffect(() => {
+    const validIds = new Set(tags.map((tag) => tag.id))
+    const remaining = values.tagIds.filter((id) => validIds.has(id))
+    if (remaining.length !== values.tagIds.length) {
+      editor.update({ tagIds: remaining })
+    }
+  }, [tags, values.tagIds, editor])
+
+  useEffect(() => {
     dragRef.current = dragIndex
   }, [dragIndex])
 

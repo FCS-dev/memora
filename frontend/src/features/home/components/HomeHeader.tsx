@@ -1,21 +1,14 @@
-import { authCopy } from '../../auth/model/copy'
+import { UserMenu } from '../../account/components/UserMenu'
 
 export interface HomeHeaderProps {
   title: string
-  userName: string
-  onLogout: () => void
 }
 
-export function HomeHeader({ title, userName, onLogout }: HomeHeaderProps) {
+export function HomeHeader({ title }: HomeHeaderProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 p-4">
-      <div className="flex flex-col">
-        <span className="text-sm text-base-content/70">{userName}</span>
-        <h1 className="text-xl font-semibold">{title}</h1>
-      </div>
-      <button type="button" className="btn btn-outline" onClick={onLogout}>
-        {authCopy.actions.logout}
-      </button>
+      <h1 className="text-xl font-semibold">{title}</h1>
+      <UserMenu />
     </header>
   )
 }

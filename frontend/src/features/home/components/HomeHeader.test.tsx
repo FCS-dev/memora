@@ -2,23 +2,44 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { HomeHeader } from './HomeHeader'
-import { authCopy } from '../../auth/model/copy'
+import { AuthContext } from '../../auth/context/authContext'
+import type { AuthContextValue } from '../../auth/context/authContext'
+import { accountCopy } from '../../account/model/copy'
+
+function authValue(): AuthContextValue {
+  return {
+    status: 'authenticated',
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' },
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    restore: vi.fn(),
+    applyProfile: vi.fn(),
+  }
+}
+
+function renderHeader(extra: Partial<AuthContextValue> = {}) {
+  const value = { ...authValue(), ...extra }
+  return render(
+    <AuthContext.Provider value={value}>
+      <HomeHeader title="Inicio" />
+    </AuthContext.Provider>,
+  )
+}
 
 describe('HomeHeader', () => {
-  it('muestra el nombre, el encabezado y el cierre de sesión', () => {
-    render(<HomeHeader title="Inicio" userName="Ana" onLogout={() => {}} />)
+  it('muestra el título y el menú de usuario en lugar del botón suelto (RF-1, RF-6)', () => {
+    renderHeader()
 
     expect(screen.getByRole('heading', { name: 'Inicio' })).toBeInTheDocument()
-    expect(screen.getByText('Ana')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: authCopy.actions.logout })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: accountCopy.menu.trigger })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
   })
 
-  it('invoca el cierre de sesión al pulsar el botón', async () => {
-    const onLogout = vi.fn()
-    render(<HomeHeader title="Inicio" userName="Ana" onLogout={onLogout} />)
+  it('ofrece el cierre de sesión dentro del menú', async () => {
+    renderHeader()
 
-    await userEvent.click(screen.getByRole('button', { name: authCopy.actions.logout }))
+    await userEvent.click(screen.getByRole('button', { name: accountCopy.menu.trigger }))
 
-    expect(onLogout).toHaveBeenCalledOnce()
+    expect(screen.getByRole('menuitem', { name: accountCopy.menu.logout })).toBeInTheDocument()
   })
 })

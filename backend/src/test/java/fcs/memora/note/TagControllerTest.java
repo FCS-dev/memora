@@ -1,6 +1,9 @@
 package fcs.memora.note;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fcs.memora.auth.JwtService;
 import fcs.memora.auth.PasswordService;
 import fcs.memora.note.dto.CreateTagRequest;
+import fcs.memora.note.dto.RenameTagRequest;
 import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
 import fcs.memora.user.UserRole;
@@ -36,6 +40,9 @@ class TagControllerTest {
 
     @Autowired
     private TagRepository tagRepository;
+
+    @Autowired
+    private NoteRepository noteRepository;
 
     @Autowired
     private PasswordService passwordService;
@@ -177,6 +184,111 @@ class TagControllerTest {
         mockMvc.perform(get("/tags")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].tagName").value("work"));
+            .andExpect(jsonPath("$[0].tagName").value("work"))
+            .andExpect(jsonPath("$[0].noteCount").value(0));
+    }
+
+    @Test
+    void shouldListNoteCountPerUser() throws Exception {
+        String token = createUserToken();
+        User user = userRepository.findByUuidUser("user-uuid").orElseThrow();
+        Tag tag = tagRepository.save(Tag.builder().user(user).tagName("work").build());
+
+        Note tagged = Note.builder()
+            .uuidNote("11111111-1111-1111-1111-111111111111")
+            .user(user)
+            .title("Nota")
+            .content("contenido")
+            .position(1000L)
+            .build();
+        tagged.setTags(java.util.Set.of(tag));
+        noteRepository.save(tagged);
+
+        mockMvc.perform(get("/tags")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].tagName").value("work"))
+            .andExpect(jsonPath("$[0].noteCount").value(1));
+    }
+
+    @Test
+    void shouldRenamePrivateTag() throws Exception {
+        String token = createUserToken();
+        User user = userRepository.findByUuidUser("user-uuid").orElseThrow();
+        Tag tag = tagRepository.save(Tag.builder().user(user).tagName("old").build());
+
+        mockMvc.perform(patch("/tags/" + tag.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RenameTagRequest("new"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tagName").value("new"))
+            .andExpect(jsonPath("$.global").value(false))
+            .andExpect(jsonPath("$.noteCount").value(0));
+    }
+
+    @Test
+    void shouldReturn409WhenRenamingToExistingPrivateName() throws Exception {
+        String token = createUserToken();
+        User user = userRepository.findByUuidUser("user-uuid").orElseThrow();
+        tagRepository.save(Tag.builder().user(user).tagName("taken").build());
+        Tag tag = tagRepository.save(Tag.builder().user(user).tagName("old").build());
+
+        mockMvc.perform(patch("/tags/" + tag.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RenameTagRequest("taken"))))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldReturn404WhenRenamingForeignTag() throws Exception {
+        User other = userRepository.save(User.builder()
+            .uuidUser("other-uuid")
+            .email("other@example.com")
+            .name("Other")
+            .passwordHash(passwordService.hashPassword("password123"))
+            .role(UserRole.USER)
+            .userStatus(UserStatus.ACTIVE)
+            .build());
+        Tag foreign = tagRepository.save(Tag.builder().user(other).tagName("old").build());
+        String token = createUserToken();
+
+        mockMvc.perform(patch("/tags/" + foreign.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RenameTagRequest("new"))))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldDeletePrivateTag() throws Exception {
+        String token = createUserToken();
+        User user = userRepository.findByUuidUser("user-uuid").orElseThrow();
+        Tag tag = tagRepository.save(Tag.builder().user(user).tagName("old").build());
+
+        mockMvc.perform(delete("/tags/" + tag.getId())
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNoContent());
+
+        assertThat(tagRepository.findById(tag.getId())).isEmpty();
+    }
+
+    @Test
+    void shouldReturn404WhenDeletingForeignTag() throws Exception {
+        User other = userRepository.save(User.builder()
+            .uuidUser("other-uuid")
+            .email("other@example.com")
+            .name("Other")
+            .passwordHash(passwordService.hashPassword("password123"))
+            .role(UserRole.USER)
+            .userStatus(UserStatus.ACTIVE)
+            .build());
+        Tag foreign = tagRepository.save(Tag.builder().user(other).tagName("old").build());
+        String token = createUserToken();
+
+        mockMvc.perform(delete("/tags/" + foreign.getId())
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNotFound());
     }
 }

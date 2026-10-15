@@ -135,7 +135,7 @@ describe('NoteEditor', () => {
   })
 
   it('crea una etiqueta desde la nota (RF-16)', async () => {
-    const tag: Tag = { id: 5, tagName: 'casa', global: false }
+    const tag: Tag = { id: 5, tagName: 'casa', global: false, noteCount: 0 }
     const onCreateTag = vi.fn().mockResolvedValue({ tag, reused: false })
     renderEditor({ onCreateTag })
 

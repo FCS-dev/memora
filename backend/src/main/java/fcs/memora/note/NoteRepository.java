@@ -32,5 +32,9 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
         + "from Note n join n.tags t where t.id in :ids group by t.id")
     List<TagUsageCount> countNotesByTagIds(@Param("ids") Collection<Long> ids);
 
+    @Query("select new fcs.memora.note.TagUsageCount(t.id, count(distinct n)) "
+        + "from Note n join n.tags t where t.id in :ids and n.user = :user group by t.id")
+    List<TagUsageCount> countNotesByTagIdsAndUser(@Param("ids") Collection<Long> ids, @Param("user") User user);
+
     long countByUser(User user);
 }

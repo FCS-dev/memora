@@ -17,6 +17,7 @@ function makeAuthValue(
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),
+    applyProfile: vi.fn(),
   }
 }
 

@@ -5,6 +5,7 @@ import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { AdminHomePage } from '../features/home/pages/AdminHomePage'
 import { NotesPage } from '../features/notes/pages/NotesPage'
+import { NotesFilterProvider } from '../features/notes/context/NotesFilterProvider'
 import { ErrorAlert } from '../shared/components/ErrorAlert'
 import { Spinner } from '../shared/components/Spinner'
 import { PublicOnly } from './guards/PublicOnly'
@@ -48,8 +49,9 @@ export function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<DefaultLanding />} />
+    <NotesFilterProvider>
+      <Routes>
+        <Route path="/" element={<DefaultLanding />} />
       <Route
         path="/login"
         element={
@@ -106,7 +108,8 @@ export function App() {
           </RequireAuth>
         }
       />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </NotesFilterProvider>
   )
 }

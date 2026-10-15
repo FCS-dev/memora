@@ -66,8 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     try {
       await authApi.logout()
-    } catch {
-      // El cierre de sesión local continúa aunque falle la revocación en el servidor.
+    } catch (error) {
+      // Un fallo de red conserva la sesión para permitir reintentar (RF-17).
+      if (error instanceof NetworkError) {
+        throw error
+      }
+      // Otros errores (p. ej. token inválido) no impiden el cierre de sesión local.
     }
     setAccessToken(null)
     setUser(null)
@@ -78,9 +82,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRestoreKey((key) => key + 1)
   }, [])
 
+  const applyProfile = useCallback((profile: AuthUser) => {
+    setUser(profile)
+  }, [])
+
   const value = useMemo(
-    () => ({ status, user, signIn, signOut, restore }),
-    [status, user, signIn, signOut, restore],
+    () => ({ status, user, signIn, signOut, restore, applyProfile }),
+    [status, user, signIn, signOut, restore, applyProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

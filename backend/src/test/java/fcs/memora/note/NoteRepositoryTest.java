@@ -122,6 +122,30 @@ class NoteRepositoryTest {
         assertThat(counts.get(0).total()).isEqualTo(2L);
     }
 
+    @Test
+    void shouldCountNotesByTagIdsOnlyForUserIncludingArchived() {
+        User owner = userRepository.save(user("noteuser8123456789012345678901234", "note8@example.com"));
+        User other = userRepository.save(user("noteuser9123456789012345678901234", "note9@example.com"));
+        Tag global = tagRepository.save(Tag.builder().user(owner).tagName("global").build());
+
+        Note active = note(owner, "Active", 100000L, false, false);
+        active.setTags(Set.of(global));
+        noteRepository.save(active);
+
+        Note archived = note(owner, "Archived", 200000L, false, true);
+        archived.setTags(Set.of(global));
+        noteRepository.save(archived);
+
+        Note foreign = note(other, "Foreign", 300000L, false, false);
+        foreign.setTags(Set.of(global));
+        noteRepository.save(foreign);
+
+        List<TagUsageCount> counts = noteRepository.countNotesByTagIdsAndUser(List.of(global.getId()), owner);
+
+        assertThat(counts).hasSize(1);
+        assertThat(counts.get(0).total()).isEqualTo(2L);
+    }
+
     private Note note(User user, String title, long position, boolean isPinned, boolean isArchived) {
         return Note.builder()
             .uuidNote(UUID.randomUUID().toString())

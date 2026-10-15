@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
-import { useAuth } from '../../auth/context/useAuth'
+import { subscribeTagsChanged } from '../../../shared/lib/events'
 import { authCopy } from '../../auth/model/copy'
 import { HomeHeader } from '../../home/components/HomeHeader'
 import { createNote, updateNote } from '../api/notesApi'
 import { createTag, listTags } from '../api/tagsApi'
 import { NoteEditor } from '../components/NoteEditor'
+import { NotesFilterBar } from '../components/NotesFilterBar'
+import type { TagsStatus } from '../components/NotesFilterBar'
 import { NotesPanel } from '../components/NotesPanel'
 import { PanelSwitch } from '../components/PanelSwitch'
+import { TagFilterSheet } from '../components/TagFilterSheet'
 import { ViewModeToggle } from '../components/ViewModeToggle'
 import { useNotes } from '../hooks/useNotes'
+import { useNotesFilter } from '../hooks/useNotesFilter'
 import { notesCopy } from '../model/copy'
+import { buildTagOptions, filterNotes, isFilterActive, resolveSelectedNames } from '../model/filters'
 import { splitByGroup } from '../model/grouping'
 import type {
   CreateNotePayload,
@@ -26,12 +31,15 @@ import { readViewMode, writeViewMode } from '../model/viewPreference'
 export type NotesPageMode = 'list' | 'new' | 'edit'
 
 export function NotesPage({ mode }: { mode: NotesPageMode }) {
-  const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const { uuid } = useParams()
   const { notes, loading, error, reload, setPinned, archive, remove, reorder, setChecklistItemChecked } =
     useNotes()
+  const { reminderOnly, tagIds, toggleReminder, toggleTag, pruneTags, clearTags, clear } =
+    useNotesFilter()
   const [tags, setTags] = useState<Tag[]>([])
+  const [tagsStatus, setTagsStatus] = useState<TagsStatus>('loading')
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<Note | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>(() => readViewMode(window.localStorage))
   const [panel, setPanel] = useState<Panel>('main')
@@ -41,17 +49,65 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
     setViewMode(mode)
   }
 
-  useEffect(() => {
+  const loadTags = useCallback(() => {
+    setTagsStatus('loading')
     listTags()
-      .then(setTags)
-      .catch(() => setTags([]))
+      .then((result) => {
+        setTags(result)
+        setTagsStatus('ready')
+      })
+      .catch(() => setTagsStatus('error'))
   }, [])
 
-  const groups = useMemo(() => splitByGroup(notes), [notes])
+  useEffect(() => {
+    loadTags()
+  }, [loadTags])
+
+  useEffect(
+    () =>
+      subscribeTagsChanged(() => {
+        loadTags()
+        if (mode === 'list') {
+          void reload()
+        }
+      }),
+    [loadTags, mode, reload],
+  )
+
+  const options = useMemo(() => buildTagOptions(notes, tags), [notes, tags])
+  const active = isFilterActive({ reminderOnly, tagIds })
+  const selectedNames = resolveSelectedNames(tagIds, options)
+  const visibleNotes = active
+    ? filterNotes(notes, { reminderOnly, tagNames: selectedNames })
+    : notes
+  const groups = useMemo(() => splitByGroup(visibleNotes), [visibleNotes])
+
+  useEffect(() => {
+    pruneTags(options)
+  }, [options, pruneTags])
+
   const editingNote = useMemo(
     () => (mode === 'edit' && uuid ? notes.find((note) => note.uuidNote === uuid) ?? null : null),
     [mode, uuid, notes],
   )
+
+  const emptyTitle = active
+    ? reminderOnly
+      ? notesCopy.empty.filterReminderTitle
+      : notesCopy.empty.filterTagsTitle
+    : panel === 'main'
+      ? notesCopy.empty.notesTitle
+      : notesCopy.empty.archivedTitle
+
+  const emptyMessage = active
+    ? reminderOnly && tagIds.length > 0
+      ? notesCopy.empty.filterBothMessage
+      : reminderOnly
+        ? notesCopy.empty.filterReminderMessage
+        : notesCopy.empty.filterTagsMessage
+    : panel === 'main'
+      ? notesCopy.empty.notesMessage
+      : notesCopy.empty.archivedMessage
 
   const handleSave = useCallback(
     async (payload: CreateNotePayload | UpdateNotePayload) => {
@@ -106,11 +162,7 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
 
   return (
     <div className="min-h-dvh">
-      <HomeHeader
-        title={authCopy.titles.userHome}
-        userName={user?.name ?? ''}
-        onLogout={() => void signOut()}
-      />
+      <HomeHeader title={authCopy.titles.userHome} />
       <main className="mx-auto w-full p-4 pb-24 lg:pb-6 min-[2560px]:w-[90%]">
         {mode === 'list' ? (
           <>
@@ -125,6 +177,19 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
               </button>
               <PanelSwitch panel={panel} onChange={setPanel} />
             </div>
+
+            <NotesFilterBar
+              reminderOnly={reminderOnly}
+              tagIds={tagIds}
+              options={options}
+              tagsStatus={tagsStatus}
+              onToggleReminder={toggleReminder}
+              onToggleTag={toggleTag}
+              onClear={clear}
+              onOpenSheet={() => setSheetOpen(true)}
+              onRetryTags={loadTags}
+            />
+
             <NotesPanel
               title={panel === 'main' ? notesCopy.titles.notes : notesCopy.sections.archived}
               sections={
@@ -134,13 +199,13 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
                         id: 'pinned',
                         title: notesCopy.sections.pinned,
                         notes: groups.pinned,
-                        reorderEnabled: true,
+                        reorderEnabled: !active,
                       },
                       {
                         id: 'others',
                         title: notesCopy.sections.others,
                         notes: groups.others,
-                        reorderEnabled: true,
+                        reorderEnabled: !active,
                       },
                     ]
                   : [
@@ -155,10 +220,8 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
               viewMode={viewMode}
               loading={loading}
               error={error}
-              emptyTitle={panel === 'main' ? notesCopy.empty.notesTitle : notesCopy.empty.archivedTitle}
-              emptyMessage={
-                panel === 'main' ? notesCopy.empty.notesMessage : notesCopy.empty.archivedMessage
-              }
+              emptyTitle={emptyTitle}
+              emptyMessage={emptyMessage}
               onRetry={() => void reload()}
               onOpen={(note) => navigate(`/home/${note.uuidNote}`)}
               onTogglePin={handleTogglePin}
@@ -193,6 +256,15 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
           +
         </button>
       ) : null}
+
+      <TagFilterSheet
+        open={sheetOpen}
+        options={options}
+        tagIds={tagIds}
+        onToggleTag={toggleTag}
+        onClear={clearTags}
+        onClose={() => setSheetOpen(false)}
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

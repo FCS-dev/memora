@@ -3,7 +3,7 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
-- Specs 001-006 implementadas al 100%; backend (142 tests) y frontend (166 tests) en verde, lint y build OK.
+- Specs 001-009 implementadas; backend (189 tests) y frontend (284 tests) en verde, lint y build OK.
 - Spec 005 (gestión de notas en UI): ciclo completo con drag&drop, checklist, archivadas, vista responsive y editor pulido.
 - Scripts de desarrollo: `scripts/start-dev.sh` levanta DB + backend + frontend; `scripts/stop-dev.sh` los detiene.
 - Historial detallado archivado en `docs/memory-archive/2026-10-13-specs-001-005.md`.
@@ -27,9 +27,9 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - `Note.contentJson` es `jsonb` (`@JdbcTypeCode(SqlTypes.JSON)`); checklist como arreglo ordenado `[{text,checked}]` (Spec 006) para preservar orden y permitir ítems duplicados. Marcar un ítem usa `PATCH /notes/{uuid}/checklist` `{item, checked}`, idempotente, busca por texto. Toda mutación en `NoteService` usa `saveAndFlush` para `updatedAt` fresco.
 - Spec 006 (frontend): `ChecklistItemForm` con `clientId` local (React key estable); reordenamiento de ítems en el editor por asa (Pointer Events) y atajos `Ctrl/Cmd+↑/↓`; auto-focus al agregar ítem; leyendas de vacío por panel (`copy.empty`); el orden se persiste al Guardar.
 - Spec 004 deroga RF-15 de Spec 002 (se elimina `lastNotePosition`); nota con UUID público (36 con guiones, con reintento ante colisión) y `position` interna por grupo (PINNED/NOT_PINNED/ARCHIVED), no expuesta; alta arriba del grupo; reordenamiento por vecinos `beforeUuid`/`afterUuid` (vacío en extremos) con punto medio entero + renumeración (falta de espacio o no positiva) y desempate por mayor id interno. Cambio de grupo sin adyacencia: a activo arriba; a ARCHIVED conserva `position`, `isPinned=false` y se lista por `createdAt` desc. `PUT` completo (título/contenido/checklist obligatorios; `isPinned` opcional; desarchiva). Vecina malformada → 400; inexistente/ajena → 404.
-- Spec 005 (frontend `features/notes/`): ciclo completo de notas con vista global, selector Notas/Archivadas, grid responsive, drag&drop táctil, checklist marcable y editor pulido. Revisiones 1–7 archivadas en `docs/memory-archive/2026-10-13-spec-005-revisiones.md`.
-- Revisión 8 (T24-T29): editor con botón de cruz para quitar recordatorio; ítems de checklist como `textarea` auto-ajustable (`text-xs` 0.75rem, fila `min-h-6` 1.5rem, campos internos 1rem, crece hasta 3 líneas con `resizeItemTextarea` y scroll interno); etiquetas movidas a una modal (`TagPicker`) con campo de alta, botón "+" dinámico, chips de seleccionadas fuera y cierre con "x"/click fuera; botón "Nueva nota" centrado en el listado (toggle izq., selector der.).
-- Revisión 10 (T30 005 / T11 003): placeholders neutros `placeholders` en copys, prop `placeholder` en `TextField`/`PasswordInput`, aplicados en editor y auth; limpieza de voseo→neutro (copy.ts, backend 403 y `.opencode/commands/sdd-implement.md`); AGENTS.md explicita "español neutro (sin voseo)".
+- Spec 005 (frontend `features/notes/`): ciclo completo de notas; revisiones 1–7 archivadas en `docs/memory-archive/2026-10-13-spec-005-revisiones.md`.
+- Spec 005 rev. 8-10: editor con cruz para quitar recordatorio; checklist como `textarea` auto-ajustable; etiquetas en modal `TagPicker`; placeholders neutros y limpieza de voseo (copy, backend 403). Detalle en `docs/memory-archive/`.
+- Spec 008 (implementada T1-T8): menú de usuario en `HomeHeader` (ícono+nombre, Escape/click-fuera, ítems por rol); tema en `features/theme/` (5 temas vía `@plugin daisyui`, `data-theme` solo al elegir, `localStorage`+BroadcastChannel, fallback OS `cupcake`/`sunset`); `features/account/` (UserMenu, ProfileDialog, ChangePasswordDialog, PrivateTagsDialog); `AuthProvider.applyProfile` refleja el nombre. Backend: `GET /tags` con `noteCount` por USER (`countNotesByTagIdsAndUser`), `PATCH/DELETE /tags/{id}` (fusión privada→global gana global, 409 dup, 404 ajena). `signOut` propaga `NetworkError` (RF-17). Fix: el CRUD de etiquetas emite `memora:tags-changed` (`shared/lib/events`) y `NotesPage` recarga etiquetas (y notas en modo lista); `NoteEditor` poda ids de etiquetas ya inexistentes.
 
 ## Aprendizajes recientes
 - Los tests de controller con filtros de seguridad requieren usuarios reales o tokens válidos; preferir `@AutoConfigureMockMvc(addFilters = false)` solo cuando no se pruebe seguridad.
@@ -38,13 +38,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - `ddl-auto: update` agrega `uuid_note` pero no elimina columnas; la columna legacy `last_note_position` (NOT NULL) rompía el registro en la BD de dev y se eliminó a mano (`ALTER TABLE users DROP COLUMN`). Conviene migraciones (Flyway).
 
 ## Próximos pasos
-- [x] Implementar Spec 001.
-- [x] Aprobar e implementar Spec 002.
-- [x] Implementar Spec 003 por tareas (T1-T10).
-- [x] Revisar y alinear longitudes de campos (backend, Spec 002/003 y frontend).
-- [x] Implementar Spec 004 por tareas (T1-T9).
-- [x] Implementar Spec 005 por tareas (T1-T30, revisiones 1-10); Spec 003 T11 (placeholders auth).
-- [x] Implementar Spec 006 por tareas (T1-T12).
-- [x] Aprobar Spec 007 (etiquetas globales = tags del ADMIN, sin notas; + unicidad): `spec.md` aprobada (RF 1-23) y `plan.md` aprobado. Dueño del catálogo por rol ADMIN (no `id=1`), unicidad BD `(user_id,tag_name)` + regla de servicio (gana global), 409 para duplicados, sin dependencias nuevas (script `007-conform-tags.sql`).
-- [x] Implementar Spec 007 por tareas (T1-T10): globales=tags del ADMIN, unicidad BD `(user_id,tag_name)`, 409 duplicados, `/admin/tags` + panel admin y picker con badge/aviso, script `007-conform-tags.sql`.
+- [x] Specs 001-006 implementadas (init, auth/admin, login/register, UUID/posición de nota, vista de notas, orden de checklist) y longitudes de campos alineadas. Detalle en `docs/memory-archive/`.
+- [x] Spec 007 aprobada e implementada (T1-T10): globales=tags del ADMIN (dueño por rol, sin notas), unicidad BD `(user_id,tag_name)` + regla de servicio (gana global), 409 duplicados, `/admin/tags` + panel admin y picker con badge/aviso, script `007-conform-tags.sql`.
+- [x] Spec 008 aprobada e implementada (T1-T8): menú de usuario (perfil, contraseña, etiquetas privadas con contador/paginación, 5 temas).
+- [x] Spec 009 (Filtros de notas por recordatorio/etiqueta) **implementada** (T1-T7): barra de chips + hoja de etiquetas en `NotesPage`; estado en `NotesFilterProvider` sobre las rutas (memoria, RF-14); uso de etiquetas calculado desde las notas; selección por id + payload en `memora:tags-changed` (fusiones/borrados, RF-13); OR entre etiquetas + AND con recordatorio; reorden deshabilitado con filtro. Backend sin cambios. Frontend 284 tests, backend 189, lint/build OK.
 - [ ] Definir specs de la Fase 2 (documentos, RAG, MCP/LLM).

@@ -1,6 +1,7 @@
 package fcs.memora.config;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -124,6 +125,13 @@ class SecurityIntegrationTest {
 
         mockMvc.perform(get("/tags")
                 .header("Authorization", "Bearer " + token))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.status").value(403));
+
+        mockMvc.perform(patch("/tags/1")
+                .header("Authorization", "Bearer " + token)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"tagName\":\"nuevo\"}"))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.status").value(403));
     }

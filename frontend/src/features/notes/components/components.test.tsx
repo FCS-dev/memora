@@ -268,8 +268,8 @@ describe('NoteCard', () => {
 
 describe('TagPicker', () => {
   const tags: Tag[] = [
-    { id: 1, tagName: 'trabajo', global: false },
-    { id: 2, tagName: 'casa', global: false },
+    { id: 1, tagName: 'trabajo', global: false, noteCount: 0 },
+    { id: 2, tagName: 'casa', global: false, noteCount: 0 },
   ]
 
   it('abre la modal, muestra las casillas y las seleccionadas como chips (RF-53)', async () => {
@@ -293,7 +293,7 @@ describe('TagPicker', () => {
   it('muestra el botón "+" solo al escribir y agrega la nueva etiqueta (RF-53)', async () => {
     const onCreate = vi
       .fn()
-      .mockResolvedValue({ tag: { id: 3, tagName: 'nueva', global: false }, reused: false })
+      .mockResolvedValue({ tag: { id: 3, tagName: 'nueva', global: false, noteCount: 0 }, reused: false })
     render(<TagPicker id="t" tags={tags} selectedIds={[]} onChange={noop} onCreate={onCreate} />)
 
     await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))
@@ -306,7 +306,7 @@ describe('TagPicker', () => {
   })
 
   it('marca las globales y avisa al reutilizar una (RF-10, RF-11)', async () => {
-    const globalTags: Tag[] = [{ id: 9, tagName: 'trabajo', global: true }]
+    const globalTags: Tag[] = [{ id: 9, tagName: 'trabajo', global: true, noteCount: 0 }]
     const onCreate = vi.fn().mockResolvedValue({ tag: globalTags[0], reused: true })
     render(<TagPicker id="t" tags={globalTags} selectedIds={[]} onChange={noop} onCreate={onCreate} />)
 

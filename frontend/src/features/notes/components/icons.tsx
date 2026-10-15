@@ -109,3 +109,49 @@ export function CrossIcon() {
     </svg>
   )
 }
+
+export function ResetIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 12a8 8 0 1 1 2.34 5.66" />
+      <path d="M4 20v-5h5" />
+    </svg>
+  )
+}
+
+export function TagIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor">
+      <path d="M3 3h8.5L21 12.5 12.5 21 3 11.5zM7.5 6A1.5 1.5 0 1 0 7.5 9 1.5 1.5 0 0 0 7.5 6z" />
+    </svg>
+  )
+}
+
+export function TagsIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 5h7l6 6-6 6-7-7z" />
+      <path d="M15 5l7 7-6 6" />
+    </svg>
+  )
+}

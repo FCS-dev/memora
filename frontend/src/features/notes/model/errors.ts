@@ -15,6 +15,28 @@ export function isDuplicateTagError(error: unknown): boolean {
   return error instanceof HttpError && error.status === 409
 }
 
+export function isNotFoundTagError(error: unknown): boolean {
+  return error instanceof HttpError && error.status === 404
+}
+
+export function mapTagError(error: unknown): string {
+  if (error instanceof NetworkError) {
+    return notesCopy.errors.generic
+  }
+  if (error instanceof HttpError) {
+    if (isDuplicateTagError(error)) {
+      return notesCopy.errors.duplicateTag
+    }
+    if (isNotFoundTagError(error)) {
+      return notesCopy.errors.notFound
+    }
+    if (error.status === 401 || error.status === 403) {
+      return serverDetail(error.body) ?? notesCopy.errors.sessionExpired
+    }
+  }
+  return notesCopy.errors.generic
+}
+
 export function mapNotesError(error: unknown): string {
   if (error instanceof NetworkError) {
     return notesCopy.errors.generic

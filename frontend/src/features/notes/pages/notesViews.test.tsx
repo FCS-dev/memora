@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +6,8 @@ import type { ReactElement } from 'react'
 import { AuthContext } from '../../auth/context/authContext'
 import type { AuthContextValue } from '../../auth/context/authContext'
 import { setAccessToken, setRefreshHandler } from '../../../shared/lib/http'
+import { emitTagsChanged } from '../../../shared/lib/events'
+import { NotesFilterProvider } from '../context/NotesFilterProvider'
 import { NotesPanel } from '../components/NotesPanel'
 import { NotesPage } from './NotesPage'
 import { notesCopy } from '../model/copy'
@@ -45,11 +47,16 @@ function authValue(): AuthContextValue {
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),
+    applyProfile: vi.fn(),
   }
 }
 
 function renderWithAuth(ui: ReactElement) {
-  return render(<AuthContext.Provider value={authValue()}>{ui}</AuthContext.Provider>)
+  return render(
+    <AuthContext.Provider value={authValue()}>
+      <NotesFilterProvider>{ui}</NotesFilterProvider>
+    </AuthContext.Provider>,
+  )
 }
 
 describe('NotesPanel', () => {
@@ -351,5 +358,34 @@ describe('NotesPage (listado)', () => {
     expect(main.className).toContain('w-full')
     expect(main.className).toContain('min-[2560px]:w-[90%]')
     expect(main.className).not.toContain('lg:w-[90%]')
+  })
+
+  it('recarga las etiquetas disponibles al cambiar el CRUD de etiquetas (RF-19, RF-27)', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/tags')) return json(200, [{ id: 1, tagName: 'casa', global: false, noteCount: 0 }])
+      if (url.endsWith('/notes/archived')) return json(200, [])
+      if (url.endsWith('/notes')) return json(200, [])
+      return json(404, null)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderWithAuth(
+      <MemoryRouter initialEntries={['/home']}>
+        <Routes>
+          <Route path="/home" element={<NotesPage mode="list" />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const tagsCalls = () =>
+      (fetchMock.mock.calls as unknown as Array<[string, { method?: string }]>).filter(
+        (call) => call[0].endsWith('/tags') && (call[1]?.method ?? 'GET') === 'GET',
+      ).length
+
+    await waitFor(() => expect(tagsCalls()).toBe(1))
+
+    act(() => emitTagsChanged())
+
+    await waitFor(() => expect(tagsCalls()).toBe(2))
   })
 })
