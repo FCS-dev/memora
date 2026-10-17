@@ -1,13 +1,10 @@
 import { UserMenu } from '../../account/components/UserMenu'
+import { Logo } from '../../../shared/components/Logo'
 
-export interface HomeHeaderProps {
-  title: string
-}
-
-export function HomeHeader({ title }: HomeHeaderProps) {
+export function HomeHeader() {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-base-300 p-4">
-      <h1 className="text-xl font-semibold">{title}</h1>
+    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-base-300/60 bg-base-200/80 px-4 backdrop-blur">
+      <Logo />
       <UserMenu />
     </header>
   )

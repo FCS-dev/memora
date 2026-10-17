@@ -117,14 +117,16 @@ export function GlobalTagsPanel() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-2xl px-2 py-4" aria-labelledby="global-tags-title">
-      <h2 id="global-tags-title" className="text-lg font-semibold">
-        {adminTagsCopy.title}
-      </h2>
-      <p className="text-sm text-base-content/70">{adminTagsCopy.description}</p>
+    <section className="mx-auto w-full max-w-2xl" aria-labelledby="global-tags-title">
+      <div className="mb-4">
+        <h2 id="global-tags-title" className="text-lg font-semibold">
+          {adminTagsCopy.title}
+        </h2>
+        <p className="text-sm text-neutral">{adminTagsCopy.description}</p>
+      </div>
 
       <form
-        className="mt-4 flex items-end gap-2"
+        className="flex items-end gap-2"
         onSubmit={(event) => {
           event.preventDefault()
           void submitCreate()
@@ -140,21 +142,33 @@ export function GlobalTagsPanel() {
             placeholder={adminTagsCopy.placeholders.newTag}
           />
         </div>
-        <button type="submit" className="btn btn-primary" disabled={creating || newName.trim() === ''}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={creating || newName.trim() === ''}
+        >
           {adminTagsCopy.actions.create}
         </button>
       </form>
       {createError ? (
-        <p role="alert" className="text-error mt-2 text-sm">
+        <p role="alert" className="mt-2 text-sm text-error">
           {createError}
         </p>
       ) : null}
 
-      {loadError ? <ErrorAlert message={loadError} /> : null}
-      {loading ? <Spinner /> : null}
+      {loadError ? (
+        <div className="mt-4">
+          <ErrorAlert message={loadError} />
+        </div>
+      ) : null}
+      {loading ? (
+        <div className="mt-6 flex justify-center">
+          <Spinner />
+        </div>
+      ) : null}
 
       {!loading && !loadError && tags.length === 0 ? (
-        <div className="mt-6 text-center text-base-content/70">
+        <div className="mt-8 text-center text-neutral">
           <p className="font-medium">{adminTagsCopy.empty.title}</p>
           <p className="text-sm">{adminTagsCopy.empty.message}</p>
         </div>
@@ -163,7 +177,10 @@ export function GlobalTagsPanel() {
       {tags.length > 0 ? (
         <ul className="mt-4 flex flex-col gap-2">
           {tags.map((tag) => (
-            <li key={tag.id} className="rounded-box flex flex-wrap items-center gap-2 bg-base-200 p-2">
+            <li
+              key={tag.id}
+              className="flex flex-wrap items-center gap-2 rounded-box border border-base-300 bg-base-200 p-3"
+            >
               {editingId === tag.id ? (
                 <>
                   <div className="min-w-40 flex-1">
@@ -183,22 +200,22 @@ export function GlobalTagsPanel() {
                   >
                     {adminTagsCopy.actions.save}
                   </button>
-                  <button type="button" className="btn btn-sm" onClick={cancelEdit}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={cancelEdit}>
                     {adminTagsCopy.actions.cancel}
                   </button>
                 </>
               ) : (
                 <>
                   <span className="flex-1 font-medium">{tag.tagName}</span>
-                  <span className="badge badge-ghost">
+                  <span className="badge badge-md bg-base-300 text-neutral">
                     {tag.noteCount} {adminTagsCopy.labels.count}
                   </span>
-                  <button type="button" className="btn btn-sm" onClick={() => startEdit(tag)}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => startEdit(tag)}>
                     {adminTagsCopy.actions.rename}
                   </button>
                   <button
                     type="button"
-                    className="btn btn-error btn-sm"
+                    className="btn btn-ghost btn-sm text-error"
                     onClick={() => setPendingDelete(tag)}
                   >
                     {adminTagsCopy.actions.delete}
@@ -211,12 +228,12 @@ export function GlobalTagsPanel() {
       ) : null}
 
       {renameError ? (
-        <p role="alert" className="text-error mt-2 text-sm">
+        <p role="alert" className="mt-2 text-sm text-error">
           {renameError}
         </p>
       ) : null}
       {deleteError ? (
-        <p role="alert" className="text-error mt-2 text-sm">
+        <p role="alert" className="mt-2 text-sm text-error">
           {deleteError}
         </p>
       ) : null}

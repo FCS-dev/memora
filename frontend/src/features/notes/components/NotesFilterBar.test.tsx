@@ -47,20 +47,17 @@ describe('NotesFilterBar', () => {
     expect(screen.getByRole('button', { name: notesCopy.filters.viewAll })).toBeInTheDocument()
   })
 
-  it('usa botones de ícono con nombre accesible y etiquetas con ícono + nombre (RNF-2)', () => {
+  it('usa botones con nombre accesible, ícono y etiqueta (RNF-2)', () => {
     renderBar()
 
     const all = screen.getByRole('button', { name: notesCopy.filters.all })
     expect(all).toHaveAttribute('aria-label', notesCopy.filters.all)
-    expect(all).toHaveTextContent('')
     expect(all.querySelector('svg')).toBeInTheDocument()
 
     const reminder = screen.getByRole('button', { name: notesCopy.filters.reminder })
-    expect(reminder).toHaveTextContent('')
     expect(reminder.querySelector('svg')).toBeInTheDocument()
 
     const viewAll = screen.getByRole('button', { name: notesCopy.filters.viewAll })
-    expect(viewAll).toHaveTextContent('')
     expect(viewAll.querySelector('svg')).toBeInTheDocument()
 
     const chip = screen.getByRole('button', { name: 'alfa' })

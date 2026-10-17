@@ -12,18 +12,17 @@ export interface ReminderInputProps {
 export function ReminderInput({ id, label, value, onChange }: ReminderInputProps) {
   return (
     <div className="flex items-center gap-1">
-      <label className="floating-label">
-        <span>{label}</span>
-        <input
-          id={id}
-          type="datetime-local"
-          size={25}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder=" "
-          className="input w-[25ch]"
-        />
+      <label htmlFor={id} className="sr-only">
+        {label}
       </label>
+      <input
+        id={id}
+        type="datetime-local"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={label}
+        className="input h-10 w-[22ch] text-sm"
+      />
       {value !== '' ? (
         <IconButton label={notesCopy.actions.clearReminder} onClick={() => onChange('')}>
           <CrossIcon />

@@ -1,12 +1,11 @@
 import { GlobalTagsPanel } from '../../admin/components/GlobalTagsPanel'
-import { authCopy } from '../../auth/model/copy'
 import { HomeHeader } from '../components/HomeHeader'
 
 export function AdminHomePage() {
   return (
     <div className="min-h-dvh">
-      <HomeHeader title={authCopy.titles.adminHome} />
-      <main>
+      <HomeHeader />
+      <main className="p-4">
         <GlobalTagsPanel />
       </main>
     </div>

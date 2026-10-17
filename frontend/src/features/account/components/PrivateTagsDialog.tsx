@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
 import { ErrorAlert } from '../../../shared/components/ErrorAlert'
 import { Spinner } from '../../../shared/components/Spinner'
@@ -8,6 +9,7 @@ import { paginate, sortTagsByName } from '../../notes/model/tags'
 import type { Tag } from '../../notes/model/types'
 import { emitTagsChanged } from '../../../shared/lib/events'
 import { accountCopy } from '../model/copy'
+import { useModalBehavior } from '../../../shared/hooks/useModalBehavior'
 
 const PAGE_SIZE = 5
 
@@ -49,6 +51,9 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
 
   const [pendingDelete, setPendingDelete] = useState<Tag | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  useModalBehavior({ open, containerRef: modalRef, onClose })
 
   const load = useCallback(async () => {
     setStatus('loading')
@@ -157,9 +162,16 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
     }
   }
 
-  return (
+  return createPortal(
     <>
-      <div role="dialog" aria-modal="true" aria-label={accountCopy.tags.title} className="modal modal-open">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={accountCopy.tags.title}
+        className="modal modal-open"
+      >
         <div className="modal-box flex max-h-[80vh] flex-col gap-4 overflow-y-auto">
           <h2 className="text-lg font-semibold">{accountCopy.tags.title}</h2>
 
@@ -214,11 +226,14 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
 
               <section className="flex flex-col gap-2">
                 {privates.length === 0 ? (
-                  <p className="text-base-content/70">{accountCopy.tags.empty}</p>
+                  <p className="text-neutral">{accountCopy.tags.empty}</p>
                 ) : (
-                  <ul className="flex flex-col gap-1">
+                  <ul className="flex flex-col gap-2">
                     {pageData.pageItems.map((tag) => (
-                      <li key={tag.id} className="flex items-center gap-2">
+                      <li
+                        key={tag.id}
+                        className="flex flex-wrap items-center gap-2 rounded-lg border border-base-300 bg-base-200 p-2"
+                      >
                         {editingId === tag.id ? (
                           <>
                             <input
@@ -238,7 +253,7 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
                             </button>
                             <button
                               type="button"
-                              className="btn btn-sm"
+                              className="btn btn-ghost btn-sm"
                               aria-label={`Cancelar ${tag.tagName}`}
                               onClick={cancelRename}
                             >
@@ -247,13 +262,16 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
                           </>
                         ) : (
                           <>
-                            <span className="flex-1">{tag.tagName}</span>
-                            <span className="badge badge-sm" aria-label={usageLabel(tag)}>
+                            <span className="flex-1 text-sm font-medium">{tag.tagName}</span>
+                            <span
+                              className="badge badge-md bg-base-300 text-neutral"
+                              aria-label={usageLabel(tag)}
+                            >
                               {tag.noteCount} {accountCopy.tags.usageSuffix}
                             </span>
                             <button
                               type="button"
-                              className="btn btn-sm btn-ghost"
+                              className="btn btn-ghost btn-sm"
                               aria-label={`Renombrar ${tag.tagName}`}
                               onClick={() => startRename(tag)}
                             >
@@ -261,7 +279,7 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
                             </button>
                             <button
                               type="button"
-                              className="btn btn-sm btn-ghost text-error"
+                              className="btn btn-ghost btn-sm text-error"
                               aria-label={`Eliminar ${tag.tagName}`}
                               onClick={() => setPendingDelete(tag)}
                             >
@@ -284,7 +302,7 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
                     >
                       {accountCopy.tags.previous}
                     </button>
-                    <span className="text-sm">
+                    <span className="text-sm text-neutral">
                       {accountCopy.tags.pagePrefix} {pageData.page} {accountCopy.tags.pageOf}{' '}
                       {pageData.pageCount}
                     </span>
@@ -302,14 +320,20 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
 
               <section className="flex flex-col gap-2">
                 <h3 className="text-sm font-semibold">{accountCopy.tags.globalSection}</h3>
-                <ul className="flex flex-col gap-1">
+                <ul className="flex flex-col gap-2">
                   {globals.map((tag) => (
-                    <li key={tag.id} className="flex items-center gap-2">
-                      <span className="flex-1">{tag.tagName}</span>
-                      <span className="badge badge-sm badge-ghost">
+                    <li
+                      key={tag.id}
+                      className="flex items-center gap-2 rounded-lg border border-base-300 bg-base-200 p-2"
+                    >
+                      <span className="flex-1 text-sm font-medium">{tag.tagName}</span>
+                      <span className="badge badge-md bg-base-300 text-neutral">
                         {accountCopy.tags.globalBadge}
                       </span>
-                      <span className="badge badge-sm" aria-label={usageLabel(tag)}>
+                      <span
+                        className="badge badge-md bg-base-300 text-neutral"
+                        aria-label={usageLabel(tag)}
+                      >
                         {tag.noteCount} {accountCopy.tags.usageSuffix}
                       </span>
                     </li>
@@ -336,6 +360,7 @@ export function PrivateTagsDialog({ open, onClose }: PrivateTagsDialogProps) {
         onConfirm={() => void confirmDelete()}
         onCancel={() => setPendingDelete(null)}
       />
-    </>
+    </>,
+    document.body,
   )
 }

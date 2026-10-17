@@ -34,7 +34,7 @@ const globalTags = [tag(9, 'trabajo', true, 1)]
 function makeAuth(): AuthContextValue {
   return {
     status: 'authenticated',
-    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' },
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER', avatarColor: '#4F5DFF' },
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),
@@ -183,6 +183,37 @@ describe('PrivateTagsDialog', () => {
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith(3))
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2))
     expect(changed.at(-1)).toEqual({ deleted: [3] })
+  })
+
+  it('cierra con Escape como cancelar', async () => {
+    const onClose = vi.fn()
+    renderDialog(onClose)
+    await screen.findByText('casa')
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('con la confirmación abierta, Escape cierra solo la confirmación y restaura el foco', async () => {
+    const onClose = vi.fn()
+    renderDialog(onClose)
+    await screen.findByText('casa')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Eliminar casa' }))
+    expect(screen.getByRole('dialog', { name: accountCopy.tags.confirmDeleteTitle })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(
+      screen.queryByRole('dialog', { name: accountCopy.tags.confirmDeleteTitle }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: accountCopy.tags.title })).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Eliminar casa' })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledOnce()
   })
 
   it('muestra error con reintento si la carga falla (RF-38)', async () => {

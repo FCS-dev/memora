@@ -49,6 +49,9 @@ public class User {
     @Column(name = "user_status", nullable = false, length = 20)
     private UserStatus userStatus;
 
+    @Column(name = "avatar_color", length = 7)
+    private String avatarColor;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

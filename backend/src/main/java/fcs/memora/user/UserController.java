@@ -1,7 +1,7 @@
 package fcs.memora.user;
 
 import fcs.memora.user.dto.ChangePasswordRequest;
-import fcs.memora.user.dto.UpdateNameRequest;
+import fcs.memora.user.dto.UpdateProfileRequest;
 import fcs.memora.user.dto.UserProfileResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,11 +33,11 @@ public class UserController {
     }
 
     @PutMapping("/me")
-    @Operation(summary = "Actualizar el nombre del usuario autenticado")
-    public ResponseEntity<UserProfileResponse> updateName(
+    @Operation(summary = "Actualizar el perfil del usuario autenticado")
+    public ResponseEntity<UserProfileResponse> updateProfile(
         @AuthenticationPrincipal UserDetails userDetails,
-        @Valid @RequestBody UpdateNameRequest request) {
-        return ResponseEntity.ok(userService.updateName(userDetails.getUsername(), request));
+        @Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(userDetails.getUsername(), request));
     }
 
     @PutMapping("/me/password")

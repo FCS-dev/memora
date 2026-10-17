@@ -9,7 +9,7 @@ import { accountCopy } from '../../account/model/copy'
 function authValue(): AuthContextValue {
   return {
     status: 'authenticated',
-    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' },
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER', avatarColor: '#4F5DFF' },
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),
@@ -21,16 +21,16 @@ function renderHeader(extra: Partial<AuthContextValue> = {}) {
   const value = { ...authValue(), ...extra }
   return render(
     <AuthContext.Provider value={value}>
-      <HomeHeader title="Inicio" />
+      <HomeHeader />
     </AuthContext.Provider>,
   )
 }
 
 describe('HomeHeader', () => {
-  it('muestra el título y el menú de usuario en lugar del botón suelto (RF-1, RF-6)', () => {
+  it('muestra la marca y el menú de usuario en lugar del botón suelto (RF-1, RF-6)', () => {
     renderHeader()
 
-    expect(screen.getByRole('heading', { name: 'Inicio' })).toBeInTheDocument()
+    expect(screen.getByText('Memora')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: accountCopy.menu.trigger })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
   })

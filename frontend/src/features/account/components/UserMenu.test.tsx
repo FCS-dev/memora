@@ -8,10 +8,16 @@ import { NetworkError } from '../../../shared/lib/http'
 import { accountCopy } from '../model/copy'
 import { UserMenu } from './UserMenu'
 
+vi.mock('../../auth/api/authApi', () => ({ getMe: vi.fn() }))
+
+import { getMe } from '../../auth/api/authApi'
+
+const mockGetMe = vi.mocked(getMe)
+
 function authValue(role: 'USER' | 'ADMIN' = 'USER', signOut = vi.fn()): AuthContextValue {
   return {
     status: 'authenticated',
-    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role },
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role, avatarColor: '#4F5DFF' },
     signIn: vi.fn(),
     signOut,
     restore: vi.fn(),
@@ -33,6 +39,7 @@ describe('UserMenu', () => {
   beforeEach(() => {
     localStorage.clear()
     delete document.documentElement.dataset.theme
+    mockGetMe.mockReset()
   })
 
   afterEach(() => {
@@ -80,13 +87,36 @@ describe('UserMenu', () => {
     await userEvent.click(screen.getByRole('button', { name: accountCopy.menu.trigger }))
     await userEvent.click(screen.getByRole('menuitem', { name: accountCopy.menu.theme }))
 
-    await userEvent.click(screen.getByRole('menuitemradio', { name: accountCopy.theme.options.nord }))
+    await userEvent.click(screen.getByRole('menuitemradio', { name: accountCopy.theme.options['memora-dark'] }))
 
-    expect(document.documentElement.dataset.theme).toBe('nord')
-    expect(screen.getByRole('menuitemradio', { name: accountCopy.theme.options.nord })).toHaveAttribute(
+    expect(document.documentElement.dataset.theme).toBe('memora-dark')
+    expect(screen.getByRole('menuitemradio', { name: accountCopy.theme.options['memora-dark'] })).toHaveAttribute(
       'aria-checked',
       'true',
     )
+  })
+
+  it('devuelve el foco al disparador al cerrar un diálogo del menú', async () => {
+    mockGetMe.mockResolvedValue({
+      uuidUser: 'u1',
+      email: 'ana@example.com',
+      name: 'Ana',
+      role: 'USER',
+      avatarColor: '#4F5DFF',
+    })
+    renderMenu()
+
+    const trigger = screen.getByRole('button', { name: accountCopy.menu.trigger })
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('menuitem', { name: accountCopy.menu.profile }))
+
+    const dialog = await screen.findByRole('dialog', { name: accountCopy.profile.title })
+    await waitFor(() => expect(dialog).toHaveFocus())
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog', { name: accountCopy.profile.title })).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 
   it('cierra la sesión desde el menú (RF-16)', async () => {

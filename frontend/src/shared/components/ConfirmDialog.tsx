@@ -1,3 +1,7 @@
+import { useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { useModalBehavior } from '../hooks/useModalBehavior'
+
 export interface ConfirmDialogProps {
   open: boolean
   title: string
@@ -17,12 +21,23 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  useModalBehavior({ open, containerRef: modalRef, onClose: onCancel })
+
   if (!open) {
     return null
   }
 
-  return (
-    <div role="dialog" aria-modal="true" aria-label={title} className="modal modal-open">
+  return createPortal(
+    <div
+      ref={modalRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="modal modal-open"
+    >
       <div className="modal-box">
         <h2 className="text-lg font-semibold">{title}</h2>
         <p className="py-2">{message}</p>
@@ -35,6 +50,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

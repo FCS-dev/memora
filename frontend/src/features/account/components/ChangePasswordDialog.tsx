@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ErrorAlert } from '../../../shared/components/ErrorAlert'
 import { PasswordInput } from '../../auth/components/PasswordInput'
 import { useAuth } from '../../auth/context/useAuth'
@@ -7,6 +8,7 @@ import { accountCopy } from '../model/copy'
 import { passwordErrorMessage } from '../model/errors'
 import { validatePasswordChange } from '../model/validation'
 import type { PasswordChangeField } from '../model/validation'
+import { useModalBehavior } from '../../../shared/hooks/useModalBehavior'
 
 export interface ChangePasswordDialogProps {
   open: boolean
@@ -21,6 +23,9 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<PasswordChangeField, string>>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  useModalBehavior({ open, containerRef: modalRef, onClose })
 
   useEffect(() => {
     if (!open) {
@@ -61,8 +66,15 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
     }
   }
 
-  return (
-    <div role="dialog" aria-modal="true" aria-label={accountCopy.password.title} className="modal modal-open">
+  return createPortal(
+    <div
+      ref={modalRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={accountCopy.password.title}
+      className="modal modal-open"
+    >
       <div className="modal-box flex flex-col gap-4">
         <h2 className="text-lg font-semibold">{accountCopy.password.title}</h2>
 
@@ -107,6 +119,7 @@ export function ChangePasswordDialog({ open, onClose }: ChangePasswordDialogProp
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

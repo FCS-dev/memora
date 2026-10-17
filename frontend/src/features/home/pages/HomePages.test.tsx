@@ -6,7 +6,6 @@ import { AdminHomePage } from './AdminHomePage'
 import { UserHomePage } from './UserHomePage'
 import { AuthContext } from '../../auth/context/authContext'
 import type { AuthContextValue } from '../../auth/context/authContext'
-import { authCopy } from '../../auth/model/copy'
 import { accountCopy } from '../../account/model/copy'
 
 vi.mock('../../admin/api/adminTagsApi', () => ({
@@ -19,7 +18,7 @@ vi.mock('../../admin/api/adminTagsApi', () => ({
 function makeAuthValue(role: 'USER' | 'ADMIN'): AuthContextValue {
   return {
     status: 'authenticated',
-    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role },
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role, avatarColor: '#4F5DFF' },
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),
@@ -35,14 +34,14 @@ describe('páginas de inicio', () => {
   it('la home de usuario muestra su encabezado y su nombre (RF-24)', () => {
     renderWithAuth(<UserHomePage />, makeAuthValue('USER'))
 
-    expect(screen.getByRole('heading', { name: authCopy.titles.userHome })).toBeInTheDocument()
+    expect(screen.getByText('Memora')).toBeInTheDocument()
     expect(screen.getByText('Ana')).toBeInTheDocument()
   })
 
   it('la home de administración muestra su encabezado (RF-25)', () => {
     renderWithAuth(<AdminHomePage />, makeAuthValue('ADMIN'))
 
-    expect(screen.getByRole('heading', { name: authCopy.titles.adminHome })).toBeInTheDocument()
+    expect(screen.getByText('Memora')).toBeInTheDocument()
   })
 
   it('cierra la sesión desde el menú de usuario (RF-16)', async () => {

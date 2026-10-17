@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string
   name: string
   role: Role
+  avatarColor: string | null
 }
 
 export interface Session {

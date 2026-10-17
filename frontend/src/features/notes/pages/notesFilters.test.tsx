@@ -44,7 +44,7 @@ function json(status: number, body: unknown): Response {
 function authValue(): AuthContextValue {
   return {
     status: 'authenticated',
-    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' },
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER', avatarColor: '#4F5DFF' },
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),

@@ -5,7 +5,7 @@ import { AuthProvider } from './AuthProvider'
 import { useAuth } from './useAuth'
 import { setAccessToken, setRefreshHandler } from '../../../shared/lib/http'
 
-const user = { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' as const }
+const user = { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' as const, avatarColor: '#4F5DFF' }
 
 function json(status: number, body: unknown): Response {
   return {

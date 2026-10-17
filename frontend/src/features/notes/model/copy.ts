@@ -55,6 +55,7 @@ export const notesCopy = {
     content: 'Escribe aquí el contenido…',
     checklistItem: 'Nuevo ítem',
     newTag: 'Nombre de la etiqueta',
+    captureBar: '¿Qué quieres recordar?',
   },
   states: {
     loading: 'Cargando notas',

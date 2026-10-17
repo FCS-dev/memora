@@ -43,7 +43,7 @@ const noop = () => {}
 function authValue(): AuthContextValue {
   return {
     status: 'authenticated',
-    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' },
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER', avatarColor: '#4F5DFF' },
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),
@@ -356,8 +356,8 @@ describe('NotesPage (listado)', () => {
     await screen.findByText('Mi nota')
     const main = container.querySelector('main')!
     expect(main.className).toContain('w-full')
-    expect(main.className).toContain('min-[2560px]:w-[90%]')
-    expect(main.className).not.toContain('lg:w-[90%]')
+    expect(main.className).toContain('max-w-7xl')
+    expect(main.className).not.toContain('min-[2560px]:w-[90%]')
   })
 
   it('recarga las etiquetas disponibles al cambiar el CRUD de etiquetas (RF-19, RF-27)', async () => {

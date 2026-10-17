@@ -61,13 +61,15 @@ export function NoteCard({
     <article
       data-note-uuid={note.uuidNote}
       data-section-id={sectionId}
-      className={`card bg-base-200 border border-base-300 p-3 text-xs md:max-w-[500px] ${viewMode === 'list' ? 'py-2' : ''} ${isDragOver ? 'ring-2 ring-primary' : ''}`}
+      className={`rounded-box border bg-base-200 p-4 transition hover:shadow-sm ${
+        isDragOver ? 'border-primary ring-1 ring-primary' : 'border-base-300'
+      } ${viewMode === 'list' ? 'py-3' : ''}`}
     >
       <div
         role="button"
         tabIndex={0}
         aria-label={`Abrir ${note.title}`}
-        className="flex cursor-pointer flex-col gap-1"
+        className="flex cursor-pointer flex-col gap-2"
         onClick={onOpen}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -76,14 +78,21 @@ export function NoteCard({
           }
         }}
       >
-        <h3 className="font-semibold">{note.title}</h3>
+        <h3 className="line-clamp-2 break-words text-[0.9375rem] font-semibold leading-tight">
+          {note.title}
+        </h3>
 
         {!note.checklistMode && note.content ? (
-          <p className={`${clampClass} leading-5 whitespace-pre-line break-words`}>{note.content}</p>
+          <p className={`text-sm leading-relaxed whitespace-pre-line break-words text-base-content/80 ${clampClass}`}>
+            {note.content}
+          </p>
         ) : null}
 
         {note.rememberAt ? (
-          <time className="flex items-center gap-1 text-base-content/70" dateTime={note.rememberAt}>
+          <time
+            className="inline-flex items-center gap-1 text-xs text-neutral"
+            dateTime={note.rememberAt}
+          >
             <ClockIcon />
             {formatDateTime(note.rememberAt)}
           </time>
@@ -93,19 +102,19 @@ export function NoteCard({
       </div>
 
       {note.checklistMode ? (
-        <ul className="mt-1 flex flex-col gap-0.5 leading-5">
+        <ul className="mt-3 flex flex-col gap-1.5">
           {visibleItems.map((item) => (
-            <li key={item.text} className="flex items-center gap-2">
+            <li key={item.text} className="flex items-start gap-2">
               <input
                 type="checkbox"
-                className="checkbox checkbox-xs"
+                className="checkbox checkbox-sm mt-0.5"
                 checked={item.checked}
                 aria-label={`${notesCopy.labels.checklistItemCheck}: ${item.text}`}
                 onChange={(event) => onToggleChecklistItem?.(item.text, event.target.checked)}
               />
               <button
                 type="button"
-                className="min-w-0 flex-1 truncate text-left"
+                className="min-w-0 flex-1 truncate text-left text-sm text-base-content/80"
                 onClick={onOpen}
               >
                 {item.text}
@@ -113,15 +122,15 @@ export function NoteCard({
             </li>
           ))}
           {isTruncated ? (
-            <li className="text-base-content/70" aria-label={notesCopy.labels.moreItems}>
+            <li className="text-xs text-neutral" aria-label={notesCopy.labels.moreItems}>
               ...
             </li>
           ) : null}
         </ul>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-        <time className="text-[0.65rem] text-base-content/70" dateTime={note.updatedAt}>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+        <time className="text-[0.65rem] text-neutral" dateTime={note.updatedAt}>
           {notesCopy.labels.updatedAt}: {formatDateTime(note.updatedAt)}
         </time>
         <NoteControls

@@ -5,18 +5,25 @@ import { AuthContext } from '../../auth/context/authContext'
 import type { AuthContextValue } from '../../auth/context/authContext'
 import { NetworkError } from '../../../shared/lib/http'
 import { accountCopy } from '../model/copy'
+import { DEFAULT_AVATAR_COLOR } from '../model/avatarColors'
 import { ProfileDialog } from './ProfileDialog'
 
 vi.mock('../../auth/api/authApi', () => ({ getMe: vi.fn() }))
-vi.mock('../api/accountApi', () => ({ updateName: vi.fn() }))
+vi.mock('../api/accountApi', () => ({ updateProfile: vi.fn() }))
 
 import { getMe } from '../../auth/api/authApi'
-import { updateName } from '../api/accountApi'
+import { updateProfile } from '../api/accountApi'
 
 const mockGetMe = vi.mocked(getMe)
-const mockUpdateName = vi.mocked(updateName)
+const mockUpdateProfile = vi.mocked(updateProfile)
 
-const profile = { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' as const }
+const profile = {
+  uuidUser: 'u1',
+  email: 'ana@example.com',
+  name: 'Ana',
+  role: 'USER' as const,
+  avatarColor: '#4F5DFF',
+}
 
 function makeAuth(applyProfile = vi.fn()): AuthContextValue {
   return {
@@ -40,7 +47,7 @@ function renderDialog(auth: AuthContextValue = makeAuth(), onClose = vi.fn()) {
 describe('ProfileDialog', () => {
   beforeEach(() => {
     mockGetMe.mockReset()
-    mockUpdateName.mockReset()
+    mockUpdateProfile.mockReset()
   })
 
   afterEach(() => {
@@ -58,6 +65,28 @@ describe('ProfileDialog', () => {
     expect(email).toBeDisabled()
   })
 
+  it('renderiza el modal fuera del contenedor para no quedar recortado por el header', async () => {
+    mockGetMe.mockResolvedValue(profile)
+
+    const { container } = renderDialog()
+
+    const dialog = await screen.findByRole('dialog', { name: accountCopy.profile.title })
+    expect(container).not.toContainElement(dialog)
+    expect(dialog.parentElement).toBe(document.body)
+  })
+
+  it('cierra con Escape como cancelar', async () => {
+    mockGetMe.mockResolvedValue(profile)
+    const onClose = vi.fn()
+
+    renderDialog(makeAuth(), onClose)
+    await screen.findByLabelText(accountCopy.profile.name)
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
   it('rechaza un nombre inválido sin guardar (RF-10)', async () => {
     mockGetMe.mockResolvedValue(profile)
     renderDialog()
@@ -68,14 +97,14 @@ describe('ProfileDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: accountCopy.profile.save }))
 
     expect(await screen.findByText(accountCopy.errors.nameTooShort)).toBeInTheDocument()
-    expect(mockUpdateName).not.toHaveBeenCalled()
+    expect(mockUpdateProfile).not.toHaveBeenCalled()
   })
 
   it('guarda un nombre válido, lo refleja y cierra (RF-9)', async () => {
     const applyProfile = vi.fn()
     const onClose = vi.fn()
     mockGetMe.mockResolvedValue(profile)
-    mockUpdateName.mockResolvedValue({ ...profile, name: 'Ana Pérez' })
+    mockUpdateProfile.mockResolvedValue({ ...profile, name: 'Ana Pérez' })
 
     renderDialog(makeAuth(applyProfile), onClose)
     const name = await screen.findByLabelText(accountCopy.profile.name)
@@ -84,9 +113,44 @@ describe('ProfileDialog', () => {
     await userEvent.type(name, '  Ana Pérez  ')
     await userEvent.click(screen.getByRole('button', { name: accountCopy.profile.save }))
 
-    await waitFor(() => expect(mockUpdateName).toHaveBeenCalledWith('Ana Pérez'))
+    await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledWith({
+      name: 'Ana Pérez',
+      avatarColor: profile.avatarColor,
+    }))
     expect(applyProfile).toHaveBeenCalledWith({ ...profile, name: 'Ana Pérez' })
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('guarda el color de avatar elegido (RF-9)', async () => {
+    const applyProfile = vi.fn()
+    mockGetMe.mockResolvedValue(profile)
+    mockUpdateProfile.mockResolvedValue({ ...profile, avatarColor: '#059669' })
+
+    renderDialog(makeAuth(applyProfile))
+    await screen.findByLabelText(accountCopy.profile.name)
+
+    await userEvent.click(screen.getByRole('radio', { name: '#059669' }))
+    await userEvent.click(screen.getByRole('button', { name: accountCopy.profile.save }))
+
+    await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledWith({
+      name: profile.name,
+      avatarColor: '#059669',
+    }))
+  })
+
+  it('usa el color por defecto cuando el perfil no tiene avatarColor', async () => {
+    mockGetMe.mockResolvedValue({ ...profile, avatarColor: null })
+    mockUpdateProfile.mockResolvedValue({ ...profile, avatarColor: DEFAULT_AVATAR_COLOR })
+
+    renderDialog()
+    await screen.findByLabelText(accountCopy.profile.name)
+
+    await userEvent.click(screen.getByRole('button', { name: accountCopy.profile.save }))
+
+    await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledWith({
+      name: profile.name,
+      avatarColor: DEFAULT_AVATAR_COLOR,
+    }))
   })
 
   it('cancela sin guardar los cambios (RF-11)', async () => {
@@ -99,7 +163,7 @@ describe('ProfileDialog', () => {
     await userEvent.type(name, 'Otro nombre')
     await userEvent.click(screen.getByRole('button', { name: accountCopy.profile.cancel }))
 
-    expect(mockUpdateName).not.toHaveBeenCalled()
+    expect(mockUpdateProfile).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -116,7 +180,7 @@ describe('ProfileDialog', () => {
 
   it('informa y conserva lo ingresado si guardar falla por red (RF-18)', async () => {
     mockGetMe.mockResolvedValue(profile)
-    mockUpdateName.mockRejectedValue(new NetworkError())
+    mockUpdateProfile.mockRejectedValue(new NetworkError())
     renderDialog()
     const name = await screen.findByLabelText(accountCopy.profile.name)
 

@@ -3,7 +3,7 @@ package fcs.memora.user;
 import fcs.memora.auth.PasswordService;
 import fcs.memora.auth.RefreshTokenService;
 import fcs.memora.user.dto.ChangePasswordRequest;
-import fcs.memora.user.dto.UpdateNameRequest;
+import fcs.memora.user.dto.UpdateProfileRequest;
 import fcs.memora.user.dto.UserProfileResponse;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -31,9 +31,10 @@ public class UserService {
     }
 
     @Transactional
-    public UserProfileResponse updateName(String uuidUser, UpdateNameRequest request) {
+    public UserProfileResponse updateProfile(String uuidUser, UpdateProfileRequest request) {
         User user = findActiveUser(uuidUser);
         user.setName(request.name().trim());
+        user.setAvatarColor(request.avatarColor());
         userRepository.save(user);
         return toResponse(user);
     }
@@ -63,7 +64,8 @@ public class UserService {
             user.getUuidUser(),
             user.getEmail(),
             user.getName(),
-            user.getRole().name()
+            user.getRole().name(),
+            user.getAvatarColor()
         );
     }
 }

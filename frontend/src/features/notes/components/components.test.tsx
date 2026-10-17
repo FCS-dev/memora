@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { IconButton } from '../../../shared/components/IconButton'
@@ -86,6 +87,51 @@ describe('ConfirmDialog', () => {
     expect(onConfirm).toHaveBeenCalledOnce()
     expect(onCancel).toHaveBeenCalledOnce()
   })
+
+  it('enfoca el diálogo, atrapa Tab y restaura el foco al cerrar con Escape', async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false)
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Abrir
+          </button>
+          <ConfirmDialog
+            open={open}
+            title="Título"
+            message="Mensaje"
+            confirmLabel="Sí"
+            cancelLabel="No"
+            onConfirm={() => setOpen(false)}
+            onCancel={() => setOpen(false)}
+          />
+        </>
+      )
+    }
+
+    render(<Harness />)
+    const trigger = screen.getByRole('button', { name: 'Abrir' })
+
+    await userEvent.click(trigger)
+    expect(screen.getByRole('dialog', { name: 'Título' })).toHaveFocus()
+
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'No' })).toHaveFocus()
+
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Sí' })).toHaveFocus()
+
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'No' })).toHaveFocus()
+
+    await userEvent.tab({ shift: true })
+    expect(screen.getByRole('button', { name: 'Sí' })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog', { name: 'Título' })).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
 })
 
 describe('ViewModeToggle', () => {
@@ -108,6 +154,37 @@ describe('NoteCard', () => {
     renderCard({ onOpen })
     await userEvent.click(screen.getByRole('button', { name: 'Abrir Nota' }))
     expect(onOpen).toHaveBeenCalledOnce()
+  })
+
+  it('limita el título a 2 líneas con ellipsis en ambas vistas', () => {
+    const { rerender } = renderCard()
+    const expectClampedTitle = () => {
+      const title = screen.getByText('Nota')
+      expect(title.className).toContain('line-clamp-2')
+      expect(title.className).toContain('break-words')
+    }
+
+    expectClampedTitle()
+
+    rerender(
+      <NoteCard
+        note={note()}
+        viewMode="card"
+        sectionId="others"
+        isFirst={false}
+        isLast={false}
+        reorderEnabled
+        onOpen={noop}
+        onTogglePin={noop}
+        onArchive={noop}
+        onRestore={noop}
+        onDelete={noop}
+        onMoveUp={noop}
+        onMoveDown={noop}
+      />,
+    )
+
+    expectClampedTitle()
   })
 
   it('recorta el contenido a 2 líneas en lista y 12 en card (RF-5, RF-6)', () => {
@@ -140,20 +217,21 @@ describe('NoteCard', () => {
     expect(content.className).toContain('whitespace-pre-line')
   })
 
-  it('usa fondo base-200 y tamaño 0.75rem (text-xs)', () => {
+  it('usa fondo base-200 y bordes suaves', () => {
     renderCard()
     const article = screen.getByText('Nota').closest('article')!
     expect(article.className).toContain('bg-base-200')
-    expect(article.className).toContain('text-xs')
+    expect(article.className).toContain('rounded-box')
   })
 
-  it('muestra la última actualización y el contenido con line-height 1.25rem (RF-3, RF-43)', () => {
+  it('muestra la última actualización y el contenido con buena legibilidad (RF-3, RF-43)', () => {
     renderCard({ note: note({ updatedAt: '2026-05-04T15:30:00' }) })
     const article = screen.getByText('Nota').closest('article')!
     const legend = article.querySelector('time[datetime="2026-05-04T15:30:00"]')
     expect(legend?.textContent).toContain(notesCopy.labels.updatedAt)
     expect(legend?.className).toContain('text-[0.65rem]')
-    expect(screen.getByText('contenido de la nota').className).toContain('leading-5')
+    expect(legend?.className).toContain('text-neutral')
+    expect(screen.getByText('contenido de la nota').className).toContain('leading-relaxed')
   })
 
   it('muestra el recordatorio con un ícono de reloj (RF-3)', () => {
@@ -163,7 +241,7 @@ describe('NoteCard', () => {
     expect(reminder?.querySelector('svg')).not.toBeNull()
   })
 
-  it('usa line-height 1.25rem en el checklist (RF-43)', () => {
+  it('usa espaciado y tipografía legible en el checklist (RF-43)', () => {
     renderCard({
       note: note({
         checklistMode: true,
@@ -175,7 +253,8 @@ describe('NoteCard', () => {
       }),
     })
     const article = screen.getByText('Nota').closest('article')!
-    expect(article.querySelector('ul')?.className).toContain('leading-5')
+    expect(article.querySelector('ul')?.className).toContain('flex-col')
+    expect(article.querySelector('li')?.className).toContain('gap-2')
   })
 
   it('muestra el checklist ítem por ítem limitado a la vista (RF-8)', () => {
@@ -317,6 +396,19 @@ describe('TagPicker', () => {
     await userEvent.click(screen.getByRole('button', { name: notesCopy.actions.addTag }))
 
     expect(await screen.findByText(notesCopy.notices.reusedTag)).toBeInTheDocument()
+  })
+
+  it('cierra con Escape y devuelve el foco al disparador', async () => {
+    render(<TagPicker id="t" tags={tags} selectedIds={[]} onChange={noop} onCreate={vi.fn()} />)
+
+    const trigger = screen.getByRole('button', { name: notesCopy.labels.tags })
+    await userEvent.click(trigger)
+    expect(screen.getByRole('dialog', { name: notesCopy.labels.tags })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog', { name: notesCopy.labels.tags })).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 
   it('cierra la modal con "x" y al hacer click fuera (RF-53)', async () => {

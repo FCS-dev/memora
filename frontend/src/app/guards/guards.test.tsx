@@ -13,7 +13,7 @@ function makeAuthValue(
 ): AuthContextValue {
   return {
     status,
-    user: role ? { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role } : null,
+    user: role ? { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role, avatarColor: '#4F5DFF' } : null,
     signIn: vi.fn(),
     signOut: vi.fn(),
     restore: vi.fn(),

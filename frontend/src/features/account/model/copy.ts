@@ -9,11 +9,8 @@ export const accountCopy = {
   },
   theme: {
     options: {
-      cupcake: 'Cupcake (claro)',
-      sunset: 'Sunset (oscuro)',
-      retro: 'Retro',
-      nord: 'Nord',
-      abyss: 'Abyss',
+      'memora-light': 'Claro',
+      'memora-dark': 'Oscuro',
     },
   },
   tags: {
@@ -43,6 +40,7 @@ export const accountCopy = {
     title: 'Perfil',
     name: 'Nombre',
     email: 'Correo electrónico',
+    avatarColor: 'Color de avatar',
     save: 'Guardar',
     cancel: 'Cancelar',
     edit: 'Editar',

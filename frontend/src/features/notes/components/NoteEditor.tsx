@@ -29,6 +29,14 @@ function resizeItemTextarea(element: HTMLTextAreaElement | null) {
   element.style.height = `${Math.min(Math.max(element.scrollHeight, ITEM_LINE_HEIGHT), maxHeight)}px`
 }
 
+function toolbarButtonClass(active: boolean): string {
+  return `inline-flex h-10 w-10 items-center justify-center rounded-lg border transition ${
+    active
+      ? 'border-primary/20 bg-primary/10 text-primary'
+      : 'border-base-300 bg-base-200 text-neutral hover:text-base-content'
+  }`
+}
+
 export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEditorProps) {
   const tagIdsByName = useMemo(
     () => Object.fromEntries(tags.map((tag) => [tag.tagName, tag.id])),
@@ -152,41 +160,46 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
         error={errors.title}
         placeholder={notesCopy.placeholders.title}
         floating
+        inputClassName="text-base font-semibold"
       />
 
-      <div className="flex items-center gap-1">
-        <IconButton
-          label={notesCopy.labels.checklistMode}
-          aria-pressed={values.checklistMode}
-          onClick={() => editor.toggleChecklistMode()}
-        >
-          <ListIcon />
-        </IconButton>
-        <IconButton
-          label={values.isPinned ? notesCopy.actions.unpin : notesCopy.actions.pin}
-          aria-pressed={values.isPinned}
-          onClick={() => editor.update({ isPinned: !values.isPinned })}
-        >
-          <PinIcon />
-        </IconButton>
-        <div className="ml-auto">
-          <ReminderInput
-            id="note-reminder"
-            label={notesCopy.labels.reminder}
-            value={values.rememberAt}
-            onChange={(value) => editor.update({ rememberAt: value })}
-          />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label={notesCopy.labels.checklistMode}
+            aria-pressed={values.checklistMode}
+            className={toolbarButtonClass(values.checklistMode)}
+            onClick={() => editor.toggleChecklistMode()}
+          >
+            <ListIcon />
+          </button>
+          <button
+            type="button"
+            aria-label={values.isPinned ? notesCopy.actions.unpin : notesCopy.actions.pin}
+            aria-pressed={values.isPinned}
+            className={toolbarButtonClass(values.isPinned)}
+            onClick={() => editor.update({ isPinned: !values.isPinned })}
+          >
+            <PinIcon />
+          </button>
         </div>
+        <ReminderInput
+          id="note-reminder"
+          label={notesCopy.labels.reminder}
+          value={values.rememberAt}
+          onChange={(value) => editor.update({ rememberAt: value })}
+        />
       </div>
 
       {values.checklistMode ? (
-        <fieldset className="flex flex-col" aria-label={notesCopy.labels.checklistItems}>
+        <fieldset className="flex flex-col gap-2" aria-label={notesCopy.labels.checklistItems}>
           {values.checklistItems.map((item, index) => (
             <div
               key={item.clientId}
               data-checklist-index={index}
-              className={`flex min-h-6 items-center gap-1 text-xs ${
-                dragIndex !== null && overIndex === index ? 'bg-base-200' : ''
+              className={`flex min-h-11 items-start gap-1 rounded-lg border px-1 py-1 transition ${
+                dragIndex !== null && overIndex === index ? 'border-primary/30 bg-primary/5' : 'border-transparent'
               } ${dragIndex === index ? 'opacity-50' : ''}`}
               onKeyDown={(event) => {
                 if (
@@ -205,7 +218,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
                 role="button"
                 tabIndex={-1}
                 aria-label={notesCopy.labels.dragHandle}
-                className="flex cursor-grab touch-none select-none items-center px-0.5 [&_svg]:size-3.5"
+                className="flex h-9 w-9 shrink-0 cursor-grab touch-none select-none items-center justify-center text-neutral hover:text-base-content"
                 onPointerDown={(event) => {
                   event.preventDefault()
                   setDragIndex(index)
@@ -215,7 +228,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
               </span>
               <input
                 type="checkbox"
-                className="checkbox checkbox-xs"
+                className="checkbox checkbox-sm mt-2"
                 checked={item.checked}
                 aria-label={`${notesCopy.labels.checklistItemCheck} ${index + 1}`}
                 onChange={() => editor.toggleChecklistItemChecked(index)}
@@ -226,7 +239,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
                   resizeItemTextarea(element)
                 }}
                 rows={1}
-                className="min-h-4 max-h-12 w-full resize-none overflow-y-auto rounded-none border-x-0 border-t-0 border-b border-base-300 bg-transparent px-1 py-0 text-xs leading-4 focus:border-primary focus:outline-none"
+                className="min-h-6 w-full flex-1 resize-none overflow-y-auto rounded-none border-x-0 border-t-0 border-b border-base-300 bg-transparent px-1 py-2 text-sm leading-5 focus:border-primary focus:outline-none"
                 aria-label={`${notesCopy.labels.checklistItems} ${index + 1}`}
                 placeholder={notesCopy.placeholders.checklistItem}
                 value={item.text}
@@ -237,7 +250,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
               />
               <IconButton
                 label={notesCopy.actions.delete}
-                className="h-4 min-h-0 w-4 p-0 [&_svg]:size-3.5"
+                className="mt-0.5 h-8 w-8 text-neutral hover:text-error"
                 onClick={() => editor.removeChecklistItem(index)}
               >
                 <CrossIcon />
@@ -246,7 +259,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
           ))}
           <button
             type="button"
-            className="btn btn-sm"
+            className="btn btn-outline btn-sm self-start"
             onClick={() => {
               focusLastRef.current = true
               editor.addChecklistItem()
@@ -256,12 +269,12 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
           </button>
           <p
             aria-live="polite"
-            className={`text-right text-xs ${overLimit ? 'text-error' : 'text-base-content/70'}`}
+            className={`text-right text-xs ${overLimit ? 'text-error' : 'text-neutral'}`}
           >
             {usedChars}/{LIMITS.contentMax}
           </p>
           {errors.checklistItems ? (
-            <p role="alert" className="text-error text-sm">
+            <p role="alert" className="text-sm text-error">
               {errors.checklistItems}
             </p>
           ) : null}
@@ -271,19 +284,19 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
           <textarea
             id="note-content"
             aria-label={notesCopy.labels.content}
-            className="textarea textarea-bordered w-full"
+            className="textarea min-h-[160px] w-full resize-y rounded-box border-base-300 bg-base-200 p-3 text-sm leading-relaxed"
             placeholder={notesCopy.placeholders.content}
             value={values.content}
             onChange={(event) => editor.update({ content: event.target.value })}
           />
           <p
             aria-live="polite"
-            className={`text-right text-xs ${overLimit ? 'text-error' : 'text-base-content/70'}`}
+            className={`text-right text-xs ${overLimit ? 'text-error' : 'text-neutral'}`}
           >
             {usedChars}/{LIMITS.contentMax}
           </p>
           {errors.content ? (
-            <p role="alert" className="text-error text-sm">
+            <p role="alert" className="text-sm text-error">
               {errors.content}
             </p>
           ) : null}
@@ -298,11 +311,11 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
         onCreate={onCreateTag}
       />
 
-      <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={handleCancel}>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button type="button" className="btn btn-ghost w-full sm:w-auto" onClick={handleCancel}>
           {notesCopy.actions.cancel}
         </button>
-        <button type="submit" className="btn btn-primary" disabled={editor.saving}>
+        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={editor.saving}>
           {notesCopy.actions.save}
         </button>
       </div>

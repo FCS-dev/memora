@@ -4,6 +4,7 @@ public record UserProfileResponse(
     String uuidUser,
     String email,
     String name,
-    String role
+    String role,
+    String avatarColor
 ) {
 }

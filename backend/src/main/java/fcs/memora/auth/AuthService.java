@@ -3,6 +3,7 @@ package fcs.memora.auth;
 import fcs.memora.auth.dto.AuthResponse;
 import fcs.memora.auth.dto.LoginRequest;
 import fcs.memora.auth.dto.RegisterRequest;
+import fcs.memora.user.AvatarColor;
 import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
 import fcs.memora.user.UserRole;
@@ -50,6 +51,7 @@ public class AuthService {
             .passwordHash(passwordService.hashPassword(request.password()))
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
+            .avatarColor(AvatarColor.randomHex())
             .build();
 
         return userRepository.save(user);

@@ -3,7 +3,7 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
-- Specs 001-009 implementadas; backend (189 tests) y frontend (284 tests) en verde, lint y build OK.
+- Specs 001-010 implementadas; backend (189 tests) y frontend (297 tests) en verde, lint y build OK.
 - Spec 005 (gestión de notas en UI): ciclo completo con drag&drop, checklist, archivadas, vista responsive y editor pulido.
 - Scripts de desarrollo: `scripts/start-dev.sh` levanta DB + backend + frontend; `scripts/stop-dev.sh` los detiene.
 - Historial detallado archivado en `docs/memory-archive/2026-10-13-specs-001-005.md`.
@@ -43,3 +43,4 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - [x] Spec 008 aprobada e implementada (T1-T8): menú de usuario (perfil, contraseña, etiquetas privadas con contador/paginación, 5 temas).
 - [x] Spec 009 (Filtros de notas por recordatorio/etiqueta) **implementada** (T1-T7): barra de chips + hoja de etiquetas en `NotesPage`; estado en `NotesFilterProvider` sobre las rutas (memoria, RF-14); uso de etiquetas calculado desde las notas; selección por id + payload en `memora:tags-changed` (fusiones/borrados, RF-13); OR entre etiquetas + AND con recordatorio; reorden deshabilitado con filtro. Backend sin cambios. Frontend 284 tests, backend 189, lint/build OK.
 - [ ] Definir specs de la Fase 2 (documentos, RAG, MCP/LLM).
+- [x] Spec 010 (rediseño visual frontend) implementada: temas propios `memora-light`/`memora-dark`, logo, tipografía Geist, capture bar, tarjetas y editor rediseñados. Correcciones posteriores: menú de usuario en portal/fixed, filtros móviles compactos (`Todos/Recordatorio/Etiquetas`), avatar con color aleatorio editable en perfil y persistido en BD, FAB móvil visible solo cuando la barra de captura no lo está, título de nota limitado a 2 líneas con ellipsis (`line-clamp-2 break-words`), fecha de actualización a `0.65rem`. Fix: `backdrop-blur` del header crea containing block para `fixed`; todos los modales se portalan a `document.body`. `useModalBehavior` centraliza Escape, foco inicial, focus trap con pila de modales y restauración de foco; al abrir diálogos desde el menú se enfoca el botón disparador. Con `.modal-open` se difumina `#root` (`filter: blur(4px)`). Frontend 297 tests.

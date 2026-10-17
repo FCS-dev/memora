@@ -126,12 +126,16 @@ export function NotesPanel({
   const total = sections.reduce((count, section) => count + section.notes.length, 0)
 
   if (loading) {
-    return <Spinner />
+    return (
+      <div className="flex justify-center py-12">
+        <Spinner />
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-start gap-2">
+      <div className="flex flex-col items-start gap-3 py-6">
         <ErrorAlert message={error} />
         <button type="button" className="btn btn-sm" onClick={onRetry}>
           {notesCopy.actions.retry}
@@ -142,21 +146,21 @@ export function NotesPanel({
 
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-        {emptyTitle ? <p className="text-lg font-medium">{emptyTitle}</p> : null}
-        {emptyMessage ? <p className="text-base-content/70">{emptyMessage}</p> : null}
+      <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+        {emptyTitle ? <p className="text-lg font-semibold">{emptyTitle}</p> : null}
+        {emptyMessage ? <p className="max-w-xs text-sm text-neutral">{emptyMessage}</p> : null}
       </div>
     )
   }
 
   return (
-    <section className="flex flex-col gap-3" aria-label={title}>
+    <section className="flex flex-col gap-6" aria-label={title}>
       {sections.map((section) => (
-        <div key={section.id} className="flex flex-col gap-2">
+        <div key={section.id} className="flex flex-col gap-3">
           {section.title && section.notes.length > 0 ? (
-            <h3 className="text-sm text-base-content/70">{section.title}</h3>
+            <h2 className="text-sm font-semibold text-neutral">{section.title}</h2>
           ) : null}
-          <ul className="grid grid-cols-1 gap-3 md:[grid-template-columns:repeat(auto-fit,minmax(348px,1fr))]">
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {section.notes.map((note, index) => (
               <li key={note.uuidNote}>
                 <NoteCard

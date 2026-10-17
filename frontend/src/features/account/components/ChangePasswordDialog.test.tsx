@@ -16,7 +16,7 @@ const mockChangePassword = vi.mocked(changePassword)
 function makeAuth(signOut = vi.fn()): AuthContextValue {
   return {
     status: 'authenticated',
-    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' },
+    user: { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER', avatarColor: '#4F5DFF' },
     signIn: vi.fn(),
     signOut,
     restore: vi.fn(),
@@ -76,6 +76,15 @@ describe('ChangePasswordDialog', () => {
 
     await waitFor(() => expect(mockChangePassword).toHaveBeenCalledWith('actual8', 'nueva123'))
     await waitFor(() => expect(signOut).toHaveBeenCalled())
+  })
+
+  it('cierra con Escape como cancelar', async () => {
+    const onClose = vi.fn()
+    renderDialog(makeAuth(), onClose)
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(onClose).toHaveBeenCalledOnce()
   })
 
   it('informa un fallo de red y conserva lo ingresado (RF-18)', async () => {

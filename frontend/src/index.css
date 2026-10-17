@@ -1,4 +1,142 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes: cupcake --default, sunset --prefersdark, retro, nord, abyss;
+
+@plugin "daisyui";
+
+@plugin "daisyui/theme" {
+  name: "memora-light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #f4f6f8;
+  --color-base-200: #ffffff;
+  --color-base-300: #e2e6ed;
+  --color-base-content: #151922;
+
+  --color-primary: #4f5dff;
+  --color-primary-content: #ffffff;
+
+  --color-secondary: #7b87ff;
+  --color-secondary-content: #ffffff;
+
+  --color-accent: #2d9cdb;
+  --color-accent-content: #ffffff;
+
+  --color-neutral: #7d8492;
+  --color-neutral-content: #ffffff;
+
+  --color-info: #2d9cdb;
+  --color-info-content: #ffffff;
+
+  --color-success: #16a34a;
+  --color-success-content: #ffffff;
+
+  --color-warning: #f59e0b;
+  --color-warning-content: #151922;
+
+  --color-error: #dc3a3a;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 0.75rem;
+
+  --size-selector: 0.25rem;
+  --size-field: 0.28125rem;
+
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "memora-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #0e1117;
+  --color-base-200: #181c24;
+  --color-base-300: #232836;
+  --color-base-content: #f4f6f8;
+
+  --color-primary: #6b7aff;
+  --color-primary-content: #ffffff;
+
+  --color-secondary: #8a9aff;
+  --color-secondary-content: #151922;
+
+  --color-accent: #4db8f7;
+  --color-accent-content: #151922;
+
+  --color-neutral: #8a93a4;
+  --color-neutral-content: #151922;
+
+  --color-info: #4db8f7;
+  --color-info-content: #151922;
+
+  --color-success: #22c55e;
+  --color-success-content: #151922;
+
+  --color-warning: #fbbf24;
+  --color-warning-content: #151922;
+
+  --color-error: #f87171;
+  --color-error-content: #151922;
+
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 0.75rem;
+
+  --size-selector: 0.25rem;
+  --size-field: 0.28125rem;
+
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@layer base {
+  html {
+    font-family: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-base-100 text-base-content;
+  }
+
+  #root {
+    transition: filter 150ms ease;
+  }
+
+  body:has(.modal-open) #root {
+    filter: blur(4px);
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
 }

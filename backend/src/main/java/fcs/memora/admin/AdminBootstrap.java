@@ -1,6 +1,7 @@
 package fcs.memora.admin;
 
 import fcs.memora.auth.PasswordService;
+import fcs.memora.user.AvatarColor;
 import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
 import fcs.memora.user.UserRole;
@@ -56,6 +57,7 @@ public class AdminBootstrap implements CommandLineRunner {
             .passwordHash(passwordService.hashPassword(adminPassword))
             .role(UserRole.ADMIN)
             .userStatus(UserStatus.ACTIVE)
+            .avatarColor(AvatarColor.randomHex())
             .build();
 
         userRepository.save(admin);

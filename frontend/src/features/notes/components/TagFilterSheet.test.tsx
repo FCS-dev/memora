@@ -69,6 +69,17 @@ describe('TagFilterSheet', () => {
     expect(screen.getByRole('button', { name: 'abrir' })).toHaveFocus()
   })
 
+  it('mantiene el foco dentro del modal con Tab', async () => {
+    const user = await openSheet()
+    const dialog = screen.getByRole('dialog', { name: notesCopy.filters.sheetTitle })
+
+    expect(dialog).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('checkbox', { name: 'alfa' })).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(screen.getByRole('button', { name: notesCopy.filters.close })).toHaveFocus()
+  })
+
   it('se cierra con el botón de cierre', async () => {
     const user = await openSheet()
 

@@ -1,9 +1,9 @@
-export const THEMES = ['cupcake', 'sunset', 'retro', 'nord', 'abyss'] as const
+export const THEMES = ['memora-light', 'memora-dark'] as const
 
 export type Theme = (typeof THEMES)[number]
 
-export const DEFAULT_THEME: Theme = 'cupcake'
-export const DARK_THEME: Theme = 'sunset'
+export const DEFAULT_THEME: Theme = 'memora-light'
+export const DARK_THEME: Theme = 'memora-dark'
 
 export const THEME_STORAGE_KEY = 'memora.theme'
 export const THEME_BROADCAST_CHANNEL = 'memora.theme'

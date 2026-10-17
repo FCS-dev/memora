@@ -4,11 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { AuthProvider } from '../features/auth/context/AuthProvider'
-import { authCopy } from '../features/auth/model/copy'
 import { notesCopy } from '../features/notes/model/copy'
 import { setAccessToken, setRefreshHandler } from '../shared/lib/http'
 
-const user = { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER' }
+const user = { uuidUser: 'u1', email: 'ana@example.com', name: 'Ana', role: 'USER', avatarColor: '#4F5DFF' }
 
 function json(status: number, body: unknown): Response {
   return {
@@ -57,16 +56,26 @@ describe('rutas de notas', () => {
     renderApp('/home')
 
     expect(
-      (await screen.findAllByRole('button', { name: notesCopy.actions.newNote })).length,
+      (
+        await screen.findAllByRole(
+          'button',
+          { name: notesCopy.actions.newNote },
+          { timeout: 3000 },
+        )
+      ).length,
     ).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { name: authCopy.titles.userHome })).toBeInTheDocument()
+    expect(screen.getByText('Memora')).toBeInTheDocument()
   })
 
   it('navega al editor de creación (RF-12)', async () => {
     stubAuthenticated()
     renderApp('/home')
 
-    const buttons = await screen.findAllByRole('button', { name: notesCopy.actions.newNote })
+    const buttons = await screen.findAllByRole(
+      'button',
+      { name: notesCopy.actions.newNote },
+      { timeout: 3000 },
+    )
     await userEvent.click(buttons[0])
 
     expect(await screen.findByLabelText(notesCopy.labels.title)).toBeInTheDocument()

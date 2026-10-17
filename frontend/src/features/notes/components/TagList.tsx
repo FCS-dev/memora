@@ -26,9 +26,9 @@ export function TagList({ tags }: TagListProps) {
 
   return (
     <div className="relative">
-      <ul ref={ref} className="flex flex-nowrap gap-1 overflow-hidden">
+      <ul ref={ref} className="flex flex-nowrap gap-1.5 overflow-hidden">
         {tags.map((tag) => (
-          <li key={tag} className="badge badge-sm shrink-0">
+          <li key={tag} className="badge badge-md bg-base-300 text-base-content">
             {tag}
           </li>
         ))}
@@ -36,7 +36,7 @@ export function TagList({ tags }: TagListProps) {
       {overflow ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 flex items-center bg-base-200 pl-1 text-base-content/70"
+          className="pointer-events-none absolute inset-y-0 right-0 flex items-center bg-base-200 pl-2 text-neutral"
         >
           ...
         </span>

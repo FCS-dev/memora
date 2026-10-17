@@ -198,11 +198,12 @@ describe('NoteEditor', () => {
     expect(onCancel).not.toHaveBeenCalled()
   })
 
-  it('usa floating label en título, recordatorio y nueva etiqueta (RF-45)', async () => {
+  it('usa floating label en título y nueva etiqueta, y label oculto en recordatorio (RF-45)', async () => {
     renderEditor()
-    for (const label of [notesCopy.labels.title, notesCopy.labels.reminder]) {
-      expect(screen.getByLabelText(label).closest('label')?.className).toContain('floating-label')
-    }
+    expect(screen.getByLabelText(notesCopy.labels.title).closest('label')?.className).toContain(
+      'floating-label',
+    )
+    expect(screen.getByLabelText(notesCopy.labels.reminder)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.tags }))
     expect(screen.getByLabelText(notesCopy.labels.newTag).closest('label')?.className).toContain(
@@ -228,19 +229,18 @@ describe('NoteEditor', () => {
     )
   })
 
-  it('el ítem es un textarea de 0.75rem en una fila base de 1.5rem y máximo 3 líneas (RF-48, RF-49, RF-52)', async () => {
+  it('el ítem es un textarea legible en una fila táctil y máximo 3 líneas (RF-48, RF-49, RF-52)', async () => {
     renderEditor()
     await userEvent.click(screen.getByRole('button', { name: notesCopy.labels.checklistMode }))
 
     const itemInput = screen.getByLabelText(`${notesCopy.labels.checklistItems} 1`) as HTMLTextAreaElement
     expect(itemInput.tagName).toBe('TEXTAREA')
     expect(itemInput.className).toContain('border-t-0')
-    expect(itemInput.className).toContain('text-xs')
-    expect(itemInput.className).toContain('min-h-4')
-    expect(itemInput.className).toContain('max-h-12')
+    expect(itemInput.className).toContain('text-sm')
+    expect(itemInput.className).toContain('min-h-6')
 
     const row = document.querySelector('[data-checklist-index]') as HTMLElement
-    expect(row.className).toContain('min-h-6')
+    expect(row.className).toContain('min-h-11')
 
     expect(screen.getByRole('button', { name: notesCopy.actions.delete })).toBeInTheDocument()
   })

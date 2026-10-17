@@ -32,13 +32,21 @@ export function NoteControls({
   onHandlePointerDown,
 }: NoteControlsProps) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       {isArchived ? (
         <>
-          <IconButton label={notesCopy.actions.restore} onClick={onRestore}>
+          <IconButton
+            label={notesCopy.actions.restore}
+            className="h-8 w-8 text-neutral hover:text-base-content"
+            onClick={onRestore}
+          >
             <RestoreIcon />
           </IconButton>
-          <IconButton label={notesCopy.actions.pin} onClick={onTogglePin}>
+          <IconButton
+            label={notesCopy.actions.pin}
+            className="h-8 w-8 text-neutral hover:text-base-content"
+            onClick={onTogglePin}
+          >
             <PinIcon />
           </IconButton>
         </>
@@ -46,6 +54,7 @@ export function NoteControls({
         <IconButton
           label={isPinned ? notesCopy.actions.unpin : notesCopy.actions.pin}
           aria-pressed={isPinned}
+          className={`h-8 w-8 ${isPinned ? 'text-primary' : 'text-neutral hover:text-base-content'}`}
           onClick={onTogglePin}
         >
           <PinIcon />
@@ -53,21 +62,39 @@ export function NoteControls({
       )}
 
       {isArchived ? null : (
-        <IconButton label={notesCopy.actions.archive} onClick={onArchive}>
+        <IconButton
+          label={notesCopy.actions.archive}
+          className="h-8 w-8 text-neutral hover:text-base-content"
+          onClick={onArchive}
+        >
           <ArchiveIcon />
         </IconButton>
       )}
 
-      <IconButton label={notesCopy.actions.delete} onClick={onDelete}>
+      <IconButton
+        label={notesCopy.actions.delete}
+        className="h-8 w-8 text-neutral hover:text-error"
+        onClick={onDelete}
+      >
         <TrashIcon />
       </IconButton>
 
       {reorderEnabled ? (
-        <>
-          <IconButton label={notesCopy.actions.moveUp} disabled={isFirst} onClick={onMoveUp}>
+        <div className="ml-1 flex items-center gap-0.5 border-l border-base-300 pl-1">
+          <IconButton
+            label={notesCopy.actions.moveUp}
+            disabled={isFirst}
+            className="h-8 w-8 text-neutral hover:text-base-content disabled:opacity-30"
+            onClick={onMoveUp}
+          >
             <UpIcon />
           </IconButton>
-          <IconButton label={notesCopy.actions.moveDown} disabled={isLast} onClick={onMoveDown}>
+          <IconButton
+            label={notesCopy.actions.moveDown}
+            disabled={isLast}
+            className="h-8 w-8 text-neutral hover:text-base-content disabled:opacity-30"
+            onClick={onMoveDown}
+          >
             <DownIcon />
           </IconButton>
           <span
@@ -79,11 +106,11 @@ export function NoteControls({
               event.preventDefault()
               onHandlePointerDown?.()
             }}
-            className="cursor-grab touch-none select-none px-1"
+            className="flex h-8 w-8 cursor-grab touch-none select-none items-center justify-center text-neutral hover:text-base-content"
           >
             <DragHandleIcon />
           </span>
-        </>
+        </div>
       ) : null}
     </div>
   )

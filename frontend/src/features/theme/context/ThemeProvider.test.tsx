@@ -9,8 +9,8 @@ function Probe() {
   return (
     <div>
       <span data-testid="theme">{theme ?? 'none'}</span>
-      <button onClick={() => setTheme('nord')}>nord</button>
-      <button onClick={() => setTheme('sunset')}>sunset</button>
+      <button onClick={() => setTheme('memora-dark')}>memora-dark</button>
+      <button onClick={() => setTheme('memora-light')}>memora-light</button>
     </div>
   )
 }
@@ -41,19 +41,19 @@ describe('ThemeProvider', () => {
   it('aplica el tema al elegirlo y lo persiste (RF-32, RF-33)', async () => {
     renderProvider()
 
-    await userEvent.click(screen.getByRole('button', { name: 'nord' }))
+    await userEvent.click(screen.getByRole('button', { name: 'memora-dark' }))
 
-    expect(document.documentElement.dataset.theme).toBe('nord')
-    expect(localStorage.getItem('memora.theme')).toBe('nord')
-    expect(screen.getByTestId('theme')).toHaveTextContent('nord')
+    expect(document.documentElement.dataset.theme).toBe('memora-dark')
+    expect(localStorage.getItem('memora.theme')).toBe('memora-dark')
+    expect(screen.getByTestId('theme')).toHaveTextContent('memora-dark')
   })
 
   it('aplica el tema guardado al montar (RF-33)', () => {
-    localStorage.setItem('memora.theme', 'retro')
+    localStorage.setItem('memora.theme', 'memora-light')
 
     renderProvider()
 
-    expect(document.documentElement.dataset.theme).toBe('retro')
+    expect(document.documentElement.dataset.theme).toBe('memora-light')
   })
 
   it('retrocede al default ante un valor guardado inválido (RF-35)', () => {
@@ -67,15 +67,15 @@ describe('ThemeProvider', () => {
   it('sincroniza el tema desde otras pestañas vía localStorage (RF-32)', async () => {
     renderProvider()
 
-    fireEvent(window, new StorageEvent('storage', { key: 'memora.theme', newValue: 'abyss' }))
+    fireEvent(window, new StorageEvent('storage', { key: 'memora.theme', newValue: 'memora-dark' }))
 
-    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('abyss'))
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('memora-dark'))
   })
 
   it('retrocede al default si otra pestaña borra el tema (RF-35)', async () => {
-    localStorage.setItem('memora.theme', 'nord')
+    localStorage.setItem('memora.theme', 'memora-dark')
     renderProvider()
-    expect(document.documentElement.dataset.theme).toBe('nord')
+    expect(document.documentElement.dataset.theme).toBe('memora-dark')
 
     fireEvent(window, new StorageEvent('storage', { key: 'memora.theme', newValue: null }))
 

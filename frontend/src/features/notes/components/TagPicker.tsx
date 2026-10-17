@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { IconButton } from '../../../shared/components/IconButton'
+import { useModalBehavior } from '../../../shared/hooks/useModalBehavior'
 import { mapNotesError } from '../model/errors'
 import { notesCopy } from '../model/copy'
 import type { CreateTagResult, Tag } from '../model/types'
@@ -19,6 +21,15 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  function close() {
+    setError(null)
+    setNotice(null)
+    setOpen(false)
+  }
+
+  useModalBehavior({ open, containerRef: modalRef, onClose: close })
 
   const selectedTags = tags.filter((tag) => selectedIds.includes(tag.id))
 
@@ -53,7 +64,7 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
   }
 
   return (
-    <div className="flex flex-col gap-2 text-xs">
+    <div className="flex flex-col gap-2">
       <button
         type="button"
         className="btn btn-outline btn-sm self-start"
@@ -65,7 +76,7 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
       {selectedTags.length > 0 ? (
         <ul className="flex flex-wrap gap-2">
           {selectedTags.map((tag) => (
-            <li key={tag.id} className="badge badge-sm">
+            <li key={tag.id} className="badge badge-md bg-base-300 text-base-content">
               {tag.tagName}
             </li>
           ))}
@@ -73,96 +84,100 @@ export function TagPicker({ id, tags, selectedIds, onChange, onCreate }: TagPick
       ) : null}
 
       {open ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={notesCopy.labels.tags}
-          className="modal modal-open"
-        >
-          <div className="modal-box flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">{notesCopy.labels.tags}</h2>
-              <IconButton
-                label={notesCopy.actions.close}
-                onClick={() => {
-                  setError(null)
-                  setNotice(null)
-                  setOpen(false)
-                }}
-              >
-                <CrossIcon />
-              </IconButton>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="floating-label flex-1">
-                <span>{notesCopy.labels.newTag}</span>
-                <input
-                  id={id}
-                  type="text"
-                  value={name}
-                  disabled={busy}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder={notesCopy.placeholders.newTag}
-                  className="input w-full"
-                />
-              </label>
-              {name.trim() !== '' ? (
-                <IconButton
-                  label={notesCopy.actions.addTag}
-                  disabled={busy}
-                  onClick={() => void submit()}
-                >
-                  <PlusIcon />
+        createPortal(
+          <div
+            ref={modalRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label={notesCopy.labels.tags}
+            className="modal modal-open"
+          >
+            <div className="modal-box flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold">{notesCopy.labels.tags}</h2>
+                <IconButton label={notesCopy.actions.close} onClick={close}>
+                  <CrossIcon />
                 </IconButton>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="floating-label flex-1">
+                  <span>{notesCopy.labels.newTag}</span>
+                  <input
+                    id={id}
+                    type="text"
+                    value={name}
+                    disabled={busy}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder={notesCopy.placeholders.newTag}
+                    className="input w-full"
+                  />
+                </label>
+                {name.trim() !== '' ? (
+                  <IconButton
+                    label={notesCopy.actions.addTag}
+                    disabled={busy}
+                    onClick={() => void submit()}
+                  >
+                    <PlusIcon />
+                  </IconButton>
+                ) : null}
+              </div>
+
+              {error ? (
+                <p role="alert" className="text-sm text-error">
+                  {error}
+                </p>
               ) : null}
+
+              {notice ? (
+                <p role="status" className="text-sm text-info">
+                  {notice}
+                </p>
+              ) : null}
+
+              <fieldset
+                className="flex max-h-64 flex-col gap-2 overflow-y-auto"
+                aria-label={notesCopy.labels.tags}
+              >
+                {tags.length > 0 ? (
+                  tags.map((tag) => (
+                    <label
+                      key={tag.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 bg-base-200 p-2 transition hover:bg-base-300"
+                    >
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-sm"
+                        checked={selectedIds.includes(tag.id)}
+                        onChange={() => toggle(tag.id)}
+                      />
+                      <span className="flex flex-1 items-center gap-2 text-sm">
+                        {tag.tagName}
+                        {tag.global ? (
+                          <span className="badge badge-sm bg-base-300 text-base-content">
+                            {notesCopy.labels.global}
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-neutral">{notesCopy.labels.noTags}</p>
+                )}
+              </fieldset>
             </div>
-
-            {error ? (
-              <p role="alert" className="text-error text-sm">
-                {error}
-              </p>
-            ) : null}
-
-            {notice ? (
-              <p role="status" className="text-info text-sm">
-                {notice}
-              </p>
-            ) : null}
-
-            <fieldset
-              className="flex max-h-64 flex-col gap-1 overflow-y-auto"
-              aria-label={notesCopy.labels.tags}
-            >
-              {tags.length > 0 ? (
-                tags.map((tag) => (
-                  <label key={tag.id} className="label cursor-pointer justify-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-sm"
-                      checked={selectedIds.includes(tag.id)}
-                      onChange={() => toggle(tag.id)}
-                    />
-                    <span className="flex items-center gap-1">
-                      {tag.tagName}
-                      {tag.global ? (
-                        <span className="badge badge-sm">{notesCopy.labels.global}</span>
-                      ) : null}
-                    </span>
-                  </label>
-                ))
-              ) : (
-                <p className="text-base-content/70">{notesCopy.labels.noTags}</p>
-              )}
-            </fieldset>
-          </div>
-          <button
-            type="button"
-            className="modal-backdrop"
-            aria-label={notesCopy.actions.close}
-            onClick={() => setOpen(false)}
-          />
-        </div>
+            <button
+              type="button"
+              tabIndex={-1}
+              className="modal-backdrop"
+              aria-label={notesCopy.actions.close}
+              onClick={close}
+            />
+          </div>,
+          document.body,
+        )
       ) : null}
     </div>
   )

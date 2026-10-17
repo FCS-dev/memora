@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
 import { subscribeTagsChanged } from '../../../shared/lib/events'
-import { authCopy } from '../../auth/model/copy'
 import { HomeHeader } from '../../home/components/HomeHeader'
 import { createNote, updateNote } from '../api/notesApi'
 import { createTag, listTags } from '../api/tagsApi'
+import { CaptureBar } from '../components/CaptureBar'
 import { NoteEditor } from '../components/NoteEditor'
 import { NotesFilterBar } from '../components/NotesFilterBar'
+import { PlusIcon } from '../components/icons'
 import type { TagsStatus } from '../components/NotesFilterBar'
 import { NotesPanel } from '../components/NotesPanel'
 import { PanelSwitch } from '../components/PanelSwitch'
@@ -43,6 +44,8 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
   const [pendingDelete, setPendingDelete] = useState<Note | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>(() => readViewMode(window.localStorage))
   const [panel, setPanel] = useState<Panel>('main')
+  const [captureBarInView, setCaptureBarInView] = useState(true)
+  const captureBarRef = useRef<HTMLDivElement>(null)
 
   function changeView(mode: ViewMode) {
     writeViewMode(window.localStorage, mode)
@@ -62,6 +65,21 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
   useEffect(() => {
     loadTags()
   }, [loadTags])
+
+  useEffect(() => {
+    const element = captureBarRef.current
+    if (!element || typeof IntersectionObserver === 'undefined') {
+      return
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setCaptureBarInView(entry.isIntersecting)
+      },
+      { threshold: 0 },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(
     () =>
@@ -162,19 +180,16 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
 
   return (
     <div className="min-h-dvh">
-      <HomeHeader title={authCopy.titles.userHome} />
-      <main className="mx-auto w-full p-4 pb-24 lg:pb-6 min-[2560px]:w-[90%]">
+      <HomeHeader />
+      <main className={`mx-auto w-full max-w-7xl p-4 lg:pb-8 ${captureBarInView ? 'pb-8' : 'pb-28'}`}>
         {mode === 'list' ? (
           <>
-            <div className="relative mb-3 flex items-center justify-between gap-2">
+            <div ref={captureBarRef}>
+              <CaptureBar />
+            </div>
+
+            <div className="mb-3 mt-4 flex items-center justify-between gap-2">
               <ViewModeToggle mode={viewMode} onChange={changeView} />
-              <button
-                type="button"
-                className="btn btn-primary absolute left-1/2 hidden -translate-x-1/2 lg:inline-flex"
-                onClick={() => navigate('/home/new')}
-              >
-                {notesCopy.actions.newNote}
-              </button>
               <PanelSwitch panel={panel} onChange={setPanel} />
             </div>
 
@@ -246,14 +261,15 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
         )}
       </main>
 
-      {mode === 'list' ? (
+      {mode === 'list' && !captureBarInView ? (
         <button
           type="button"
           aria-label={notesCopy.actions.newNote}
-          className="btn btn-primary btn-circle btn-lg fixed bottom-6 left-1/2 z-50 -translate-x-1/2 lg:hidden"
+          className="btn btn-primary fixed bottom-6 left-1/2 z-50 h-12 -translate-x-1/2 rounded-full px-5 shadow-lg transition-opacity duration-200 lg:hidden"
           onClick={() => navigate('/home/new')}
         >
-          +
+          <PlusIcon />
+          {notesCopy.actions.newNote}
         </button>
       ) : null}
 

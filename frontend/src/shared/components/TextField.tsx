@@ -12,6 +12,7 @@ export interface TextFieldProps {
   disabled?: boolean
   floating?: boolean
   placeholder?: string
+  inputClassName?: string
 }
 
 export function TextField({
@@ -26,6 +27,7 @@ export function TextField({
   disabled,
   floating = false,
   placeholder,
+  inputClassName,
 }: TextFieldProps) {
   const errorId = `${id}-error`
 
@@ -41,7 +43,7 @@ export function TextField({
       placeholder={placeholder ?? (floating ? ' ' : undefined)}
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? errorId : undefined}
-      className="input w-full"
+      className={`input w-full ${inputClassName ?? ''}`}
     />
   )
 

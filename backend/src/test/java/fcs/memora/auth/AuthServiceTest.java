@@ -59,6 +59,7 @@ class AuthServiceTest {
         assertThat(registered.getName()).isEqualTo("New User");
         assertThat(registered.getRole()).isEqualTo(UserRole.USER);
         assertThat(registered.getUserStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(registered.getAvatarColor()).isNotNull();
     }
 
     @Test

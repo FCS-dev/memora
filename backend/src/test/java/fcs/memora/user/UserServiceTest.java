@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 import fcs.memora.auth.PasswordService;
 import fcs.memora.auth.RefreshTokenService;
 import fcs.memora.user.dto.ChangePasswordRequest;
-import fcs.memora.user.dto.UpdateNameRequest;
+import fcs.memora.user.dto.UpdateProfileRequest;
 import fcs.memora.user.dto.UserProfileResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,17 +47,22 @@ class UserServiceTest {
         assertThat(response.email()).isEqualTo("user@example.com");
         assertThat(response.name()).isEqualTo("User");
         assertThat(response.role()).isEqualTo("USER");
+        assertThat(response.avatarColor()).isEqualTo("#4F5DFF");
     }
 
     @Test
-    void shouldUpdateName() {
+    void shouldUpdateProfile() {
         User user = activeUser();
         when(userRepository.findByUuidUser("uuiduuiduuiduuiduuiduuiduuiduuid")).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        UserProfileResponse response = userService.updateName("uuiduuiduuiduuiduuiduuiduuiduuid", new UpdateNameRequest("New Name"));
+        UserProfileResponse response = userService.updateProfile(
+            "uuiduuiduuiduuiduuiduuiduuiduuid",
+            new UpdateProfileRequest("New Name", "#059669")
+        );
 
         assertThat(response.name()).isEqualTo("New Name");
+        assertThat(response.avatarColor()).isEqualTo("#059669");
     }
 
     @Test
@@ -103,6 +108,7 @@ class UserServiceTest {
             .passwordHash("hashedPassword")
             .role(UserRole.USER)
             .userStatus(UserStatus.ACTIVE)
+            .avatarColor("#4F5DFF")
             .build();
     }
 }
