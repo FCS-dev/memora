@@ -68,6 +68,7 @@ export interface CreateNotePayload {
   isPinned: boolean
   isArchived: boolean
   tagIds: number[]
+  idempotencyKey?: string
 }
 
 export interface UpdateNotePayload {

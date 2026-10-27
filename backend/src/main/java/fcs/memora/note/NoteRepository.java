@@ -15,6 +15,8 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 
     Optional<Note> findByUuidNoteAndUser(String uuidNote, User user);
 
+    Optional<Note> findByUserAndIdempotencyKey(User user, String idempotencyKey);
+
     boolean existsByUuidNote(String uuidNote);
 
     List<Note> findByUserAndIsArchivedFalseOrderByIsPinnedDescPositionDescIdDesc(User user);

@@ -139,3 +139,52 @@ describe('useNoteEditor', () => {
     )
   })
 })
+
+
+describe('borrador e idempotencia', () => {
+  it('precarga un texto inicial con fallback de título y contenido', () => {
+    const { result } = renderHook(() =>
+      useNoteEditor(null, {}, vi.fn(), { initialText: 'comprar pan' }),
+    )
+    expect(result.current.values.title).toBe('comprar pan')
+    expect(result.current.values.content).toBe('comprar pan')
+    expect(result.current.values.isPinned).toBe(false)
+  })
+
+  it('precarga un borrador con etiquetas y recordatorio', () => {
+    const { result } = renderHook(() =>
+      useNoteEditor(null, {}, vi.fn(), {
+        initialDraft: {
+          title: 'Comprar pan',
+          content: '',
+          checklistMode: false,
+          checklistItems: [],
+          rememberAt: '2026-10-27T18:00:00',
+          tagIds: [2],
+        },
+      }),
+    )
+    expect(result.current.values.title).toBe('Comprar pan')
+    expect(result.current.values.tagIds).toEqual([2])
+    expect(result.current.values.rememberAt).toBe('2026-10-27T18:00')
+  })
+
+  it('reutiliza la clave de idempotencia en reintentos', async () => {
+    const onSave = vi.fn()
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce(undefined)
+    const { result } = renderHook(() => useNoteEditor(null, {}, onSave, { initialText: 'texto' }))
+
+    await act(async () => {
+      await result.current.save()
+    })
+    await act(async () => {
+      await result.current.save()
+    })
+
+    const first = onSave.mock.calls[0][0] as { idempotencyKey?: string }
+    const second = onSave.mock.calls[1][0] as { idempotencyKey?: string }
+    expect(first.idempotencyKey).toBeDefined()
+    expect(second.idempotencyKey).toBe(first.idempotencyKey)
+  })
+})

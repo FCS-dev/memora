@@ -5,6 +5,8 @@ import {
   buildUpdatePayload,
   charCount,
   deriveChecklistItems,
+  draftToFormValues,
+  fallbackFormValues,
   isNoteEmpty,
   validateNoteForm,
 } from './validation'
@@ -95,6 +97,10 @@ describe('charCount', () => {
     expect(charCount(values({ content: 'hola mundo' }))).toBe(10)
   })
 
+  it('cuenta puntos de código con emojis', () => {
+    expect(charCount(values({ content: '😀😀' }))).toBe(2)
+  })
+
   it('suma las longitudes de los ítems recortados con checklist (RF-36)', () => {
     expect(
       charCount(
@@ -165,5 +171,36 @@ describe('buildUpdatePayload', () => {
     )
     expect(payload.isPinned).toBe(true)
     expect(payload.rememberAt).toBe('2026-02-03T08:00')
+  })
+})
+
+
+describe('fallback y borrador', () => {
+  it('usa el texto como contenido y los primeros 60 puntos como título', () => {
+    const text = '😀'.repeat(61)
+    const values = fallbackFormValues(text)
+    expect(Array.from(values.title)).toHaveLength(60)
+    expect(values.content).toBe(text)
+    expect(values.isPinned).toBe(false)
+  })
+
+  it('convierte un borrador a valores del editor sin fijado', () => {
+    const values = draftToFormValues({
+      title: 'Comprar pan',
+      content: 'contenido',
+      checklistMode: false,
+      checklistItems: [],
+      rememberAt: '2026-10-27T18:00:00',
+      tagIds: [2, 3],
+    })
+    expect(values.title).toBe('Comprar pan')
+    expect(values.rememberAt).toBe('2026-10-27T18:00')
+    expect(values.tagIds).toEqual([2, 3])
+    expect(values.isPinned).toBe(false)
+  })
+
+  it('incluye la clave de idempotencia en el payload de creación', () => {
+    const payload = buildCreatePayload(values({ title: 'T' }), null, 'key-1')
+    expect(payload.idempotencyKey).toBe('key-1')
   })
 })

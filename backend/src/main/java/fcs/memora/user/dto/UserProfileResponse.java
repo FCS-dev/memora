@@ -5,6 +5,10 @@ public record UserProfileResponse(
     String email,
     String name,
     String role,
-    String avatarColor
+    String avatarColor,
+    boolean aiEnabled,
+    String aiConsent,
+    boolean aiConsentRequired,
+    String aiConsentNoticeVersion
 ) {
 }

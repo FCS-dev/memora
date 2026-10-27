@@ -1,5 +1,7 @@
 package fcs.memora.user;
 
+import fcs.memora.ai.AiConsentService;
+import fcs.memora.ai.AiProperties;
 import fcs.memora.auth.PasswordService;
 import fcs.memora.auth.RefreshTokenService;
 import fcs.memora.user.dto.ChangePasswordRequest;
@@ -17,12 +19,17 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordService passwordService;
     private final RefreshTokenService refreshTokenService;
+    private final AiConsentService aiConsentService;
+    private final AiProperties aiProperties;
 
     public UserService(UserRepository userRepository, PasswordService passwordService,
-                       RefreshTokenService refreshTokenService) {
+                       RefreshTokenService refreshTokenService, AiConsentService aiConsentService,
+                       AiProperties aiProperties) {
         this.userRepository = userRepository;
         this.passwordService = passwordService;
         this.refreshTokenService = refreshTokenService;
+        this.aiConsentService = aiConsentService;
+        this.aiProperties = aiProperties;
     }
 
     public UserProfileResponse getProfile(String uuidUser) {
@@ -65,7 +72,11 @@ public class UserService {
             user.getEmail(),
             user.getName(),
             user.getRole().name(),
-            user.getAvatarColor()
+            user.getAvatarColor(),
+            aiProperties.enabled(),
+            aiConsentService.state(user).name(),
+            aiConsentService.requiresConsent(user),
+            aiProperties.noticeVersion()
         );
     }
 }

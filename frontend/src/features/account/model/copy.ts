@@ -48,6 +48,18 @@ export const accountCopy = {
     error: 'No se pudo cargar el perfil',
     retry: 'Reintentar',
   },
+  ai: {
+    title: 'Inteligencia artificial',
+    enabled: 'Habilitada',
+    disabled: 'Deshabilitada',
+    notSet: 'Sin configurar',
+    noticeChanged: 'El aviso de privacidad cambió. Acepta la nueva versión para volver a usar la IA.',
+    adminDisabled: 'La IA está desactivada para este entorno.',
+    enable: 'Habilitar IA',
+    revoke: 'Revocar',
+    acceptNew: 'Aceptar aviso',
+    version: 'Versión del aviso',
+  },
   password: {
     title: 'Cambiar contraseña',
     current: 'Contraseña actual',

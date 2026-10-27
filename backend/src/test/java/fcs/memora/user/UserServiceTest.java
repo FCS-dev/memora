@@ -7,6 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fcs.memora.ai.AiConsentService;
+import fcs.memora.ai.AiProperties;
+import fcs.memora.ai.ConsentState;
 import fcs.memora.auth.PasswordService;
 import fcs.memora.auth.RefreshTokenService;
 import fcs.memora.user.dto.ChangePasswordRequest;
@@ -34,6 +37,12 @@ class UserServiceTest {
     @Mock
     private RefreshTokenService refreshTokenService;
 
+    @Mock
+    private AiConsentService aiConsentService;
+
+    @Mock
+    private AiProperties aiProperties;
+
     @InjectMocks
     private UserService userService;
 
@@ -41,6 +50,7 @@ class UserServiceTest {
     void shouldGetProfile() {
         User user = activeUser();
         when(userRepository.findByUuidUser("uuiduuiduuiduuiduuiduuiduuiduuid")).thenReturn(Optional.of(user));
+        stubAiProfile();
 
         UserProfileResponse response = userService.getProfile("uuiduuiduuiduuiduuiduuiduuiduuid");
 
@@ -48,6 +58,10 @@ class UserServiceTest {
         assertThat(response.name()).isEqualTo("User");
         assertThat(response.role()).isEqualTo("USER");
         assertThat(response.avatarColor()).isEqualTo("#4F5DFF");
+        assertThat(response.aiEnabled()).isFalse();
+        assertThat(response.aiConsent()).isEqualTo("NOT_SET");
+        assertThat(response.aiConsentRequired()).isTrue();
+        assertThat(response.aiConsentNoticeVersion()).isEqualTo("1");
     }
 
     @Test
@@ -55,6 +69,7 @@ class UserServiceTest {
         User user = activeUser();
         when(userRepository.findByUuidUser("uuiduuiduuiduuiduuiduuiduuiduuid")).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        stubAiProfile();
 
         UserProfileResponse response = userService.updateProfile(
             "uuiduuiduuiduuiduuiduuiduuiduuid",
@@ -110,5 +125,12 @@ class UserServiceTest {
             .userStatus(UserStatus.ACTIVE)
             .avatarColor("#4F5DFF")
             .build();
+    }
+
+    private void stubAiProfile() {
+        when(aiProperties.enabled()).thenReturn(false);
+        when(aiProperties.noticeVersion()).thenReturn("1");
+        when(aiConsentService.state(any(User.class))).thenReturn(ConsentState.NOT_SET);
+        when(aiConsentService.requiresConsent(any(User.class))).thenReturn(true);
     }
 }

@@ -13,7 +13,9 @@ import fcs.memora.admin.TagOwnerResolver;
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
+import fcs.memora.note.dto.CreateNoteResult;
 import fcs.memora.note.dto.NoteResponse;
+import fcs.memora.note.exception.IdempotencyConflictException;
 import fcs.memora.note.dto.ReorderNoteRequest;
 import fcs.memora.note.dto.UpdateNoteRequest;
 import fcs.memora.user.User;
@@ -158,6 +160,55 @@ class NoteServiceTest {
         noteService.create("uuid", new CreateNoteRequest("Title", "Content", false, null, null, false, false, null));
 
         verify(noteRepository, times(3)).existsByUuidNote(any());
+    }
+
+    @Test
+    void shouldReturnExistingNoteForSameIdempotencyKey() {
+        User user = user();
+        Note existing = note(user, NOTE_UUID, 100_000L, false, false);
+        existing.setIdempotencyKey("key-1");
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(noteRepository.findByUserAndIdempotencyKey(user, "key-1"))
+            .thenReturn(Optional.of(existing));
+
+        CreateNoteResult result = noteService.createResult("uuid",
+            new CreateNoteRequest("Title", "Content", false, null, null, false, false, null, "key-1"));
+
+        assertThat(result.created()).isFalse();
+        assertThat(result.note().uuidNote()).isEqualTo(NOTE_UUID);
+        verify(noteRepository, never()).saveAndFlush(any(Note.class));
+    }
+
+    @Test
+    void shouldRejectSameKeyWithDifferentData() {
+        User user = user();
+        Note existing = note(user, NOTE_UUID, 100_000L, false, false);
+        existing.setIdempotencyKey("key-1");
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(noteRepository.findByUserAndIdempotencyKey(user, "key-1"))
+            .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> noteService.createResult("uuid",
+            new CreateNoteRequest("Other", "Content", false, null, null, false, false, null, "key-1")))
+            .isInstanceOf(IdempotencyConflictException.class);
+    }
+
+    @Test
+    void shouldStoreIdempotencyKeyOnCreate() {
+        User user = user();
+        when(userRepository.findByUuidUser("uuid")).thenReturn(Optional.of(user));
+        when(noteRepository.findByUserAndIdempotencyKey(user, "key-2")).thenReturn(Optional.empty());
+        when(noteRepository.maxPosition(user, false, false)).thenReturn(Optional.empty());
+        when(noteRepository.existsByUuidNote(any())).thenReturn(false);
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CreateNoteResult result = noteService.createResult("uuid",
+            new CreateNoteRequest("Title", "Content", false, null, null, false, false, null, "key-2"));
+
+        assertThat(result.created()).isTrue();
+        ArgumentCaptor<Note> captor = ArgumentCaptor.forClass(Note.class);
+        verify(noteRepository).saveAndFlush(captor.capture());
+        assertThat(captor.getValue().getIdempotencyKey()).isEqualTo("key-2");
     }
 
     @Test

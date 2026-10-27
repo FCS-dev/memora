@@ -5,6 +5,7 @@ import fcs.memora.auth.dto.RegisterRequest;
 import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
 import fcs.memora.note.dto.CreateTagRequest;
+import fcs.memora.note.dto.UpdateChecklistItemRequest;
 import fcs.memora.user.dto.UpdateNameRequest;
 import jakarta.validation.Validator;
 import jakarta.validation.Validation;
@@ -90,6 +91,30 @@ class FieldLengthValidationTest {
             .anyMatch(v -> v.getPropertyPath().toString().equals("content"));
         assertThat(validator.validate(note("t", "a".repeat(2500), false, null))).isEmpty();
         assertThat(validator.validate(note("t", null, false, null))).isEmpty();
+    }
+
+    @Test
+    void noteLimitsUseCodePoints() {
+        assertThat(validator.validate(note("😀".repeat(200), null, false, null))).isEmpty();
+        assertThat(validator.validate(note("😀".repeat(201), null, false, null)))
+            .anyMatch(v -> v.getPropertyPath().toString().equals("title"));
+        assertThat(validator.validate(note("t", "😀".repeat(2500), false, null))).isEmpty();
+        assertThat(validator.validate(note("t", "😀".repeat(2501), false, null)))
+            .anyMatch(v -> v.getPropertyPath().toString().equals("content"));
+    }
+
+    @Test
+    void checklistLimitsUseCodePoints() {
+        assertThat(validator.validate(note("t", "", true,
+            List.of(new ChecklistItem("😀".repeat(2500), true))))).isEmpty();
+        assertThat(validator.validate(note("t", "", true,
+            List.of(new ChecklistItem("😀".repeat(2501), true))))).isNotEmpty();
+    }
+
+    @Test
+    void updateChecklistItemUsesCodePoints() {
+        assertThat(validator.validate(new UpdateChecklistItemRequest("😀".repeat(2500), true))).isEmpty();
+        assertThat(validator.validate(new UpdateChecklistItemRequest("😀".repeat(2501), true))).isNotEmpty();
     }
 
     @Test

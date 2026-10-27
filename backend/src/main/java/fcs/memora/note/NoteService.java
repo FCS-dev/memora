@@ -4,15 +4,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fcs.memora.admin.TagOwnerResolver;
+import fcs.memora.note.exception.IdempotencyConflictException;
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.ChecklistItem;
 import fcs.memora.note.dto.CreateNoteRequest;
+import fcs.memora.note.dto.CreateNoteResult;
 import fcs.memora.note.dto.NoteResponse;
 import fcs.memora.note.dto.ReorderNoteRequest;
 import fcs.memora.note.dto.UpdateNoteRequest;
 import fcs.memora.user.User;
 import fcs.memora.user.UserRepository;
 import fcs.memora.user.UserStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -48,18 +53,32 @@ public class NoteService {
 
     @Transactional
     public NoteResponse create(String uuidUser, CreateNoteRequest request) {
+        return createResult(uuidUser, request).note();
+    }
+
+    @Transactional
+    public CreateNoteResult createResult(String uuidUser, CreateNoteRequest request) {
         if (request.isArchived()) {
             throw new IllegalArgumentException("No se puede crear una nota archivada");
         }
 
         User user = findActiveUser(uuidUser);
-        Set<Tag> tags = resolveTags(user, request.tagIds());
+        String idempotencyKey = normalizeIdempotencyKey(request.idempotencyKey());
 
+        if (idempotencyKey != null) {
+            Optional<Note> existing = noteRepository.findByUserAndIdempotencyKey(user, idempotencyKey);
+            if (existing.isPresent()) {
+                return resolveExisting(existing.get(), request);
+            }
+        }
+
+        Set<Tag> tags = resolveTags(user, request.tagIds());
         boolean pinned = request.isPinned();
         long maxPosition = noteRepository.maxPosition(user, pinned, false).orElse(0L);
 
         Note note = Note.builder()
             .uuidNote(generateUniqueUuid())
+            .idempotencyKey(idempotencyKey)
             .user(user)
             .title(request.title())
             .content(request.checklistMode() ? "" : request.content())
@@ -72,7 +91,16 @@ public class NoteService {
             .tags(tags)
             .build();
 
-        return toResponse(noteRepository.saveAndFlush(note));
+        try {
+            return new CreateNoteResult(toResponse(noteRepository.saveAndFlush(note)), true);
+        } catch (DataIntegrityViolationException ex) {
+            if (idempotencyKey == null) {
+                throw ex;
+            }
+            return noteRepository.findByUserAndIdempotencyKey(user, idempotencyKey)
+                .map(existing -> resolveExisting(existing, request))
+                .orElseThrow(() -> ex);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -263,6 +291,47 @@ public class NoteService {
         if (NoteGroup.resolve(neighbor.isPinned(), neighbor.isArchived()) != group) {
             throw new IllegalArgumentException("La vecina no pertenece al grupo de la nota");
         }
+    }
+
+    private CreateNoteResult resolveExisting(Note note, CreateNoteRequest request) {
+        if (!sameCreateData(note, request)) {
+            throw new IdempotencyConflictException();
+        }
+        return new CreateNoteResult(toResponse(note), false);
+    }
+
+    private boolean sameCreateData(Note note, CreateNoteRequest request) {
+        if (!Objects.equals(note.getTitle(), request.title())
+            || note.isChecklistMode() != request.checklistMode()
+            || !Objects.equals(note.getRememberAt(), request.rememberAt())
+            || note.isPinned() != request.isPinned()
+            || note.isArchived() != request.isArchived()) {
+            return false;
+        }
+
+        if (request.checklistMode()) {
+            List<ChecklistItem> requested = request.checklistItems() == null
+                ? List.of()
+                : request.checklistItems();
+            if (!fromJson(note.getContentJson()).equals(requested)) {
+                return false;
+            }
+        } else if (!Objects.equals(note.getContent(), request.content())) {
+            return false;
+        }
+
+        Set<Long> requestedTags = request.tagIds() == null ? Set.of() : request.tagIds();
+        Set<Long> existingTags = note.getTags().stream()
+            .map(Tag::getId)
+            .collect(Collectors.toSet());
+        return existingTags.equals(requestedTags);
+    }
+
+    private String normalizeIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return null;
+        }
+        return idempotencyKey.trim();
     }
 
     private String generateUniqueUuid() {

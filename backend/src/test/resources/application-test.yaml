@@ -19,3 +19,7 @@ jwt:
 
 server:
   port: 0
+
+memora:
+  ai:
+    enabled: false

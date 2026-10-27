@@ -4,7 +4,7 @@ import fcs.memora.note.validation.ChecklistPayload;
 import fcs.memora.note.validation.ValidChecklist;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import fcs.memora.validation.CodePointSize;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,8 +12,8 @@ import java.util.Set;
 
 @ValidChecklist
 public record UpdateNoteRequest(
-    @NotBlank @Size(min = 1, max = 200) String title,
-    @Size(max = 2500) String content,
+    @NotBlank @CodePointSize(min = 1, max = 200) String title,
+    @CodePointSize(max = 2500) String content,
     @NotNull boolean checklistMode,
     List<ChecklistItem> checklistItems,
     LocalDateTime rememberAt,

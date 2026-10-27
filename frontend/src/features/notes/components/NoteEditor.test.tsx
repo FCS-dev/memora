@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -262,5 +262,31 @@ describe('NoteEditor', () => {
       'placeholder',
       notesCopy.placeholders.checklistItem,
     )
+  })
+})
+
+
+describe('borrador, avisos y guardado', () => {
+  it('muestra advertencias y el texto original', () => {
+    renderEditor({
+      warnings: ['TITLE_TRUNCATED', 'REMINDER_ZONE_INVALID'],
+      originalText: 'texto original',
+    })
+    expect(screen.getByText('El título se recortó al límite permitido.')).toBeInTheDocument()
+    expect(screen.getByText('La zona horaria no es válida; el recordatorio quedó vacío.')).toBeInTheDocument()
+    expect(screen.getByText('texto original')).toBeInTheDocument()
+  })
+
+  it('deshabilita el botón mientras guarda para evitar doble envío', async () => {
+    let resolveSave: () => void = () => {}
+    const onSave = vi.fn().mockReturnValue(new Promise<void>((resolve) => { resolveSave = resolve }))
+    renderEditor({ onSave, initialText: 'texto' })
+
+    const saveButton = screen.getByRole('button', { name: notesCopy.actions.save })
+    await userEvent.click(saveButton)
+
+    expect(saveButton).toBeDisabled()
+    resolveSave()
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
   })
 })

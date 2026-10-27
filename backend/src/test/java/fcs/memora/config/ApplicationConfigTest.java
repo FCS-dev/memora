@@ -22,6 +22,19 @@ class ApplicationConfigTest {
         assertThat(content).contains("${DB_USERNAME}");
         assertThat(content).contains("${DB_PASSWORD}");
         assertThat(content).contains("${SERVER_PORT}");
+        assertThat(content).contains("${AI_ENABLED:false}");
+        assertThat(content).contains("${GROQ_API_KEY:}");
+        assertThat(content).contains("${GROQ_BASE_URL:https://api.groq.com/openai/v1}");
+    }
+
+    @Test
+    void disablesOpenAiAutoConfigurationToKeepAiOptIn() throws Exception {
+        String content = Files.readString(CONFIG_PATH);
+
+        assertThat(content).contains("chat: none");
+        assertThat(content).contains("embedding: none");
+        assertThat(content).contains("image: none");
+        assertThat(content).contains("moderation: none");
     }
 
     @Test

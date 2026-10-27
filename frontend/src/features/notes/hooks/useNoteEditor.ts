@@ -1,17 +1,20 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { mapNotesError } from '../model/errors'
 import {
   buildChecklistPayload,
   buildCreatePayload,
   buildUpdatePayload,
   deriveChecklistItems,
+  draftToFormValues,
   emptyFormValues,
+  fallbackFormValues,
   isNoteEmpty,
   newChecklistItem,
   noteToFormValues,
   sameFormValues,
   validateNoteForm,
 } from '../model/validation'
+import type { NoteDraft } from '../capture/model/types'
 import type {
   CreateNotePayload,
   FormErrors,
@@ -41,15 +44,35 @@ export interface UseNoteEditorResult {
   save: () => Promise<SaveResult>
 }
 
+export interface UseNoteEditorOptions {
+  initialDraft?: NoteDraft
+  initialText?: string
+  idempotencyKey?: string
+}
+
+function createIdempotencyKey(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 export function useNoteEditor(
   note: Note | null,
   tagIdsByName: Record<string, number>,
   onSave: (payload: CreateNotePayload | UpdateNotePayload) => Promise<void>,
+  options: UseNoteEditorOptions = {},
 ): UseNoteEditorResult {
-  const initial = useMemo(
-    () => (note ? noteToFormValues(note, tagIdsByName) : emptyFormValues()),
-    [note, tagIdsByName],
-  )
+  const initial = useMemo(() => {
+    if (note) {
+      return noteToFormValues(note, tagIdsByName)
+    }
+    if (options.initialDraft) {
+      return draftToFormValues(options.initialDraft)
+    }
+    if (options.initialText?.trim()) {
+      return fallbackFormValues(options.initialText)
+    }
+    return emptyFormValues()
+  }, [note, tagIdsByName, options.initialDraft, options.initialText])
+  const idempotencyKeyRef = useRef(options.idempotencyKey ?? createIdempotencyKey())
   const [values, setValues] = useState<NoteFormValues>(initial)
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
@@ -133,7 +156,9 @@ export function useNoteEditor(
       const checklistItems = values.checklistMode
         ? buildChecklistPayload(values.checklistItems)
         : null
-      const payload = note ? buildUpdatePayload(values, checklistItems) : buildCreatePayload(values, checklistItems)
+      const payload = note
+        ? buildUpdatePayload(values, checklistItems)
+        : buildCreatePayload(values, checklistItems, idempotencyKeyRef.current)
       await onSave(payload)
       return { status: 'saved' }
     } catch (saveError) {

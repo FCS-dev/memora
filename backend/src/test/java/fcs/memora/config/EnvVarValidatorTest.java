@@ -43,4 +43,30 @@ class EnvVarValidatorTest {
 
         assertThat(EnvVarValidator.validateRequired(vars)).containsExactly("SERVER_PORT");
     }
+
+    @Test
+    void doesNotRequireGroqVariablesWhenAiIsDisabled() {
+        Map<String, String> vars = Map.of("AI_ENABLED", "false");
+
+        assertThat(EnvVarValidator.validateAi(vars)).isEmpty();
+    }
+
+    @Test
+    void requiresGroqVariablesWhenAiIsEnabled() {
+        Map<String, String> vars = Map.of("AI_ENABLED", "true");
+
+        assertThat(EnvVarValidator.validateAi(vars))
+            .containsExactly("GROQ_API_KEY", "GROQ_BASE_URL");
+    }
+
+    @Test
+    void acceptsAiEnabledWithGroqVariables() {
+        Map<String, String> vars = Map.of(
+            "AI_ENABLED", "true",
+            "GROQ_API_KEY", "key",
+            "GROQ_BASE_URL", "https://api.groq.com/openai/v1"
+        );
+
+        assertThat(EnvVarValidator.validateAi(vars)).isEmpty();
+    }
 }

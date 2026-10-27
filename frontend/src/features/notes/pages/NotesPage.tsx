@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
 import { subscribeTagsChanged } from '../../../shared/lib/events'
 import { HomeHeader } from '../../home/components/HomeHeader'
 import { createNote, updateNote } from '../api/notesApi'
 import { createTag, listTags } from '../api/tagsApi'
 import { CaptureBar } from '../components/CaptureBar'
+import { CaptureFlow } from '../capture/components/CaptureFlow'
 import { NoteEditor } from '../components/NoteEditor'
 import { NotesFilterBar } from '../components/NotesFilterBar'
 import { PlusIcon } from '../components/icons'
@@ -33,13 +34,16 @@ export type NotesPageMode = 'list' | 'new' | 'edit'
 
 export function NotesPage({ mode }: { mode: NotesPageMode }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { uuid } = useParams()
+  const manualText = (location.state as { manualText?: string } | null)?.manualText ?? ''
   const { notes, loading, error, reload, setPinned, archive, remove, reorder, setChecklistItemChecked } =
     useNotes()
   const { reminderOnly, tagIds, toggleReminder, toggleTag, pruneTags, clearTags, clear } =
     useNotesFilter()
   const [tags, setTags] = useState<Tag[]>([])
   const [tagsStatus, setTagsStatus] = useState<TagsStatus>('loading')
+  const [captureOpen, setCaptureOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<Note | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>(() => readViewMode(window.localStorage))
@@ -185,7 +189,7 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
         {mode === 'list' ? (
           <>
             <div ref={captureBarRef}>
-              <CaptureBar />
+              <CaptureBar onOpen={() => setCaptureOpen(true)} />
             </div>
 
             <div className="mb-3 mt-4 flex items-center justify-between gap-2">
@@ -254,6 +258,7 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
             key={mode === 'edit' ? (editingNote?.uuidNote ?? 'loading') : 'new'}
             note={mode === 'edit' ? editingNote : null}
             tags={tags}
+            initialText={mode === 'new' ? manualText : undefined}
             onSave={handleSave}
             onCreateTag={handleCreateTag}
             onCancel={() => navigate('/home')}
@@ -261,16 +266,31 @@ export function NotesPage({ mode }: { mode: NotesPageMode }) {
         )}
       </main>
 
-      {mode === 'list' && !captureBarInView ? (
+      {mode === 'list' && !captureBarInView && !captureOpen ? (
         <button
           type="button"
           aria-label={notesCopy.actions.newNote}
           className="btn btn-primary fixed bottom-6 left-1/2 z-50 h-12 -translate-x-1/2 rounded-full px-5 shadow-lg transition-opacity duration-200 lg:hidden"
-          onClick={() => navigate('/home/new')}
+          onClick={() => setCaptureOpen(true)}
         >
           <PlusIcon />
           {notesCopy.actions.newNote}
         </button>
+      ) : null}
+
+      {mode === 'list' ? (
+        <CaptureFlow
+          open={captureOpen}
+          tags={tags}
+          tagsStatus={tagsStatus}
+          onClose={() => setCaptureOpen(false)}
+          onManual={(text) => {
+            setCaptureOpen(false)
+            navigate('/home/new', { state: { manualText: text } })
+          }}
+          onCreateTag={handleCreateTag}
+          onSave={handleSave}
+        />
       ) : null}
 
       <TagFilterSheet

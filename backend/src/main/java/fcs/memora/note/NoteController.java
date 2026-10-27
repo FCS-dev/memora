@@ -2,6 +2,7 @@ package fcs.memora.note;
 
 import fcs.memora.note.dto.ChangeNoteGroupRequest;
 import fcs.memora.note.dto.CreateNoteRequest;
+import fcs.memora.note.dto.CreateNoteResult;
 import fcs.memora.note.dto.NoteResponse;
 import fcs.memora.note.dto.ReorderNoteRequest;
 import fcs.memora.note.dto.UpdateChecklistItemRequest;
@@ -41,8 +42,9 @@ public class NoteController {
     public ResponseEntity<NoteResponse> create(
         @AuthenticationPrincipal UserDetails userDetails,
         @Valid @RequestBody CreateNoteRequest request) {
-        NoteResponse response = noteService.create(userDetails.getUsername(), request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        CreateNoteResult result = noteService.createResult(userDetails.getUsername(), request);
+        HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
+        return ResponseEntity.status(status).body(result.note());
     }
 
     @GetMapping

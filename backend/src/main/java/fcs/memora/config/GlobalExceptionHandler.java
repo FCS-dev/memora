@@ -1,6 +1,14 @@
 package fcs.memora.config;
 
+import fcs.memora.ai.AiConsentRequiredException;
+import fcs.memora.ai.AiDisabledException;
+import fcs.memora.ai.AiProviderException;
+import fcs.memora.ai.AiQuotaExceededException;
+import fcs.memora.ai.AiTimeoutException;
+import fcs.memora.ai.OutOfScopeException;
+import fcs.memora.ai.TagCatalogUnavailableException;
 import fcs.memora.note.exception.DuplicateTagException;
+import fcs.memora.note.exception.IdempotencyConflictException;
 import fcs.memora.note.exception.InvalidTagException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -77,6 +85,54 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleNotFound(UsernameNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(buildErrorResponse("No encontrado", 404, "Recurso no encontrado"));
+    }
+
+    @ExceptionHandler(AiConsentRequiredException.class)
+    public ResponseEntity<Map<String, Object>> handleAiConsentRequired(AiConsentRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED)
+            .body(buildErrorResponse("Consentimiento requerido", 428, ex.getMessage()));
+    }
+
+    @ExceptionHandler(AiQuotaExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleAiQuotaExceeded(AiQuotaExceededException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(buildErrorResponse("Límite alcanzado", 429, ex.getMessage()));
+    }
+
+    @ExceptionHandler(AiDisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleAiDisabled(AiDisabledException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(buildErrorResponse("IA desactivada", 503, ex.getMessage()));
+    }
+
+    @ExceptionHandler(AiProviderException.class)
+    public ResponseEntity<Map<String, Object>> handleAiProvider(AiProviderException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+            .body(buildErrorResponse("Fallo de IA", 502, "No se pudo completar la interpretación"));
+    }
+
+    @ExceptionHandler(AiTimeoutException.class)
+    public ResponseEntity<Map<String, Object>> handleAiTimeout(AiTimeoutException ex) {
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
+            .body(buildErrorResponse("Tiempo de espera agotado", 504, ex.getMessage()));
+    }
+
+    @ExceptionHandler(OutOfScopeException.class)
+    public ResponseEntity<Map<String, Object>> handleOutOfScope(OutOfScopeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(buildErrorResponse("Fuera de alcance", 422, ex.getMessage()));
+    }
+
+    @ExceptionHandler(TagCatalogUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleTagCatalogUnavailable(TagCatalogUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+            .body(buildErrorResponse("No se pudo preparar la interpretación", 502, ex.getMessage()));
+    }
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleIdempotencyConflict(IdempotencyConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(buildErrorResponse("Conflicto", 409, ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

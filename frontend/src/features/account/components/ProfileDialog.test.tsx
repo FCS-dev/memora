@@ -9,13 +9,14 @@ import { DEFAULT_AVATAR_COLOR } from '../model/avatarColors'
 import { ProfileDialog } from './ProfileDialog'
 
 vi.mock('../../auth/api/authApi', () => ({ getMe: vi.fn() }))
-vi.mock('../api/accountApi', () => ({ updateProfile: vi.fn() }))
+vi.mock('../api/accountApi', () => ({ updateProfile: vi.fn(), updateAiConsent: vi.fn() }))
 
 import { getMe } from '../../auth/api/authApi'
-import { updateProfile } from '../api/accountApi'
+import { updateAiConsent, updateProfile } from '../api/accountApi'
 
 const mockGetMe = vi.mocked(getMe)
 const mockUpdateProfile = vi.mocked(updateProfile)
+const mockUpdateAiConsent = vi.mocked(updateAiConsent)
 
 const profile = {
   uuidUser: 'u1',
@@ -48,6 +49,7 @@ describe('ProfileDialog', () => {
   beforeEach(() => {
     mockGetMe.mockReset()
     mockUpdateProfile.mockReset()
+    mockUpdateAiConsent.mockReset()
   })
 
   afterEach(() => {
@@ -151,6 +153,41 @@ describe('ProfileDialog', () => {
       name: profile.name,
       avatarColor: DEFAULT_AVATAR_COLOR,
     }))
+  })
+
+  it('habilita la IA desde el perfil', async () => {
+    const applyProfile = vi.fn()
+    mockGetMe.mockResolvedValue({ ...profile, aiEnabled: true, aiConsent: 'NOT_SET', aiConsentRequired: true, aiConsentNoticeVersion: '1' })
+    mockUpdateAiConsent.mockResolvedValue({ ...profile, aiEnabled: true, aiConsent: 'GRANTED', aiConsentRequired: false, aiConsentNoticeVersion: '1' })
+
+    renderDialog(makeAuth(applyProfile))
+    await screen.findByRole('button', { name: accountCopy.ai.enable })
+
+    await userEvent.click(screen.getByRole('button', { name: accountCopy.ai.enable }))
+
+    await waitFor(() => expect(mockUpdateAiConsent).toHaveBeenCalledWith('GRANTED', '1'))
+    expect(applyProfile).toHaveBeenCalledWith(expect.objectContaining({ aiConsent: 'GRANTED' }))
+  })
+
+  it('revoca la IA desde el perfil', async () => {
+    mockGetMe.mockResolvedValue({ ...profile, aiEnabled: true, aiConsent: 'GRANTED', aiConsentRequired: false, aiConsentNoticeVersion: '1' })
+    mockUpdateAiConsent.mockResolvedValue({ ...profile, aiEnabled: true, aiConsent: 'REVOKED', aiConsentRequired: false, aiConsentNoticeVersion: '1' })
+
+    renderDialog()
+    await screen.findByRole('button', { name: accountCopy.ai.revoke })
+
+    await userEvent.click(screen.getByRole('button', { name: accountCopy.ai.revoke }))
+
+    await waitFor(() => expect(mockUpdateAiConsent).toHaveBeenCalledWith('REVOKED', '1'))
+  })
+
+  it('pide aceptar la nueva versión del aviso', async () => {
+    mockGetMe.mockResolvedValue({ ...profile, aiEnabled: true, aiConsent: 'GRANTED', aiConsentRequired: true, aiConsentNoticeVersion: '2' })
+
+    renderDialog()
+
+    expect(await screen.findByText(accountCopy.ai.noticeChanged)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: accountCopy.ai.acceptNew })).toBeInTheDocument()
   })
 
   it('cancela sin guardar los cambios (RF-11)', async () => {

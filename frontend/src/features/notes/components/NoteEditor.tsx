@@ -4,6 +4,8 @@ import { ErrorAlert } from '../../../shared/components/ErrorAlert'
 import { IconButton } from '../../../shared/components/IconButton'
 import { TextField } from '../../../shared/components/TextField'
 import { useNoteEditor } from '../hooks/useNoteEditor'
+import type { AiWarningCode, NoteDraft } from '../capture/model/types'
+import { captureCopy } from '../capture/model/copy'
 import { notesCopy } from '../model/copy'
 import type { CreateNotePayload, CreateTagResult, Note, Tag, UpdateNotePayload } from '../model/types'
 import { charCount, LIMITS } from '../model/validation'
@@ -14,6 +16,10 @@ import { TagPicker } from './TagPicker'
 export interface NoteEditorProps {
   note: Note | null
   tags: Tag[]
+  initialDraft?: NoteDraft
+  initialText?: string
+  warnings?: AiWarningCode[]
+  originalText?: string
   onSave: (payload: CreateNotePayload | UpdateNotePayload) => Promise<void>
   onCreateTag: (name: string) => Promise<CreateTagResult>
   onCancel: () => void
@@ -37,15 +43,26 @@ function toolbarButtonClass(active: boolean): string {
   }`
 }
 
-export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEditorProps) {
+export function NoteEditor({
+  note,
+  tags,
+  initialDraft,
+  initialText,
+  warnings,
+  originalText,
+  onSave,
+  onCreateTag,
+  onCancel,
+}: NoteEditorProps) {
   const tagIdsByName = useMemo(
     () => Object.fromEntries(tags.map((tag) => [tag.tagName, tag.id])),
     [tags],
   )
-  const editor = useNoteEditor(note, tagIdsByName, onSave)
+  const editor = useNoteEditor(note, tagIdsByName, onSave, { initialDraft, initialText })
   const { values, errors } = editor
   const { moveChecklistItem } = editor
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
@@ -126,6 +143,7 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
     setSaveError(null)
     const result = await editor.save()
     if (result.status === 'saved' || result.status === 'empty') {
+      setSaved(true)
       onCancel()
       return
     }
@@ -151,6 +169,25 @@ export function NoteEditor({ note, tags, onSave, onCreateTag, onCancel }: NoteEd
       }}
     >
       {saveError ? <ErrorAlert message={saveError} /> : null}
+      <p aria-live="polite" className="sr-only">
+        {editor.saving ? 'Guardando' : saved ? 'Nota guardada' : ''}
+      </p>
+      {warnings && warnings.length > 0 ? (
+        <div className="rounded-box border border-warning/30 bg-warning/10 p-3 text-sm">
+          <p className="font-medium">{captureCopy.draftWarning}</p>
+          <ul className="list-disc pl-5">
+            {warnings.map((code) => (
+              <li key={code}>{captureCopy.warnings[code]}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {originalText ? (
+        <details className="rounded-box border border-base-300 p-3 text-sm">
+          <summary className="cursor-pointer font-medium">{captureCopy.originalText}</summary>
+          <p className="mt-2 whitespace-pre-wrap">{originalText}</p>
+        </details>
+      ) : null}
 
       <TextField
         id="note-title"

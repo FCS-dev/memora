@@ -1,6 +1,6 @@
 # Plan 011b — Captura de notas por voz
 
-Estado: borrador
+Estado: borrador revisado; pendiente de aprobación final
 
 Spec: `specs/011b-captura-voz/spec.md` (aprobada)
 Spec base: `specs/011a-captura-texto/spec.md` (aprobada)
@@ -67,46 +67,50 @@ Alternativa: usar el modelo de audio de Spring AI si el spike confirma que funci
 `TranscriptionController`:
 
 - `POST /ai/transcribe` (USER).
-- `multipart/form-data`: `audio` (archivo) y `zoneId` (texto).
+- `multipart/form-data`: `audio` (archivo).
 - Valida:
   - Archivo presente y no vacío.
   - Tamaño <= `maxAudioBytes`.
   - MIME permitido: `audio/webm`, `audio/ogg`, `audio/mp4`, `audio/mpeg`, `audio/wav`, `audio/x-m4a`, `audio/m4a`.
-  - `zoneId` válido o ausente (se usa la zona del servidor para la cuota).
 - Delega en `TranscriptionService`.
 
 `TranscriptionService`:
 
 1. Cargar usuario activo.
 2. Verificar `AI_ENABLED`; si no, `AiDisabledException`.
-3. Verificar consentimiento; si falta, `AiConsentRequiredException` (428).
-4. Verificar cuota con `AiUsageService.check(user, zone)`.
+3. Verificar consentimiento vigente; si es `NOT_SET`, `DENIED` o `REVOKED`, lanzar `AiConsentRequiredException` (428). La UI decide si muestra el diálogo o el modo manual.
+4. Verificar cuota con `AiUsageService.check(user)`; la zona del navegador no participa.
 5. Llamar a `TranscriptionClient.transcribe`.
 6. Si el texto está vacío, devolver 200 con `text=""` y no registrar cuota.
 7. Normalizar el texto (trim).
-8. Registrar cuota solo si hay texto no vacío.
-9. Devolver `{ "text": "..." }`.
-10. No persistir el audio.
+8. Revalidar el consentimiento antes de responder; si fue revocado, descartar la respuesta y lanzar `AiConsentRequiredException`.
+9. Registrar cuota solo si hay texto no vacío.
+10. Devolver `{ "text": "..." }`.
+11. No persistir el audio.
 
 El archivo temporal de multipart se elimina al terminar la request. No se escribe en una ruta propia ni en la base de datos.
 
 Errores:
 
-- 400: archivo ausente, vacío, formato no permitido o `zoneId` inválido.
+- 400: archivo ausente, vacío o formato no permitido.
 - 413: archivo demasiado grande.
 - 428: consentimiento requerido.
 - 429: cuota agotada.
-- 502/504: fallo o timeout del proveedor.
+- 502: fallo del proveedor, 429 del proveedor, bloqueo de contenido o respuesta inválida.
+- 504: timeout del proveedor.
 - 503: IA desactivada.
+- Los errores del proveedor no consumen cuota.
 
 `SecurityConfig`: agregar `.requestMatchers("/ai/**").hasRole("USER")`.
 
 ### 3.4 Cuota y consentimiento
 
 - Reutilizar `AiConsentService` y `AiUsageService` de 011a.
-- Una transcripción con texto no vacío cuenta como una operación completada.
+- Una transcripción válida con texto no vacío cuenta como una operación completada; una vacía, inválida, cancelada o fallida no cuenta.
 - La interpretación posterior del texto cuenta como otra operación (011a).
-- La revocación del consentimiento se consulta antes de llamar al proveedor; si se revoca durante la request, el backend descarta la respuesta y no la devuelve.
+- La cuota se reinicia con la zona del servidor, igual que en 011a.
+- El consentimiento se consulta antes de llamar al proveedor y se revalida antes de responder; si se revoca durante la request, el backend descarta la respuesta y no la devuelve.
+- El audio no se persiste; el `Blob` solo vive en memoria del navegador para reintentar.
 
 ## 4. Frontend
 
@@ -115,7 +119,7 @@ Errores:
 Modificar:
 
 - `shared/lib/http.ts`: agregar `requestMultipart<T>(path, formData, options)` con el mismo manejo de token, refresh y 401 que `request`.
-- `features/notes/capture/api/captureApi.ts`: `transcribeAudio(blob, zoneId)`.
+- `features/notes/capture/api/captureApi.ts`: `transcribeAudio(blob)`.
 - `features/notes/capture/components/CaptureSheet.tsx`: integrar el micrófono y la inserción del texto.
 - `features/notes/capture/components/MicButton.tsx`: control de grabación.
 - `features/notes/capture/hooks/useAudioRecorder.ts`: grabación, estados, límites y limpieza.
@@ -160,7 +164,7 @@ Se envía el `Blob` con el MIME elegido. El backend acepta los formatos listados
 - Visible solo si:
   - `useMediaQuery('(pointer: fine) and (min-width: 768px)')`.
   - `aiEnabled`.
-  - Hay consentimiento o se puede solicitarlo.
+  - El consentimiento está `GRANTED` vigente o `NOT_SET`; con `DENIED` o `REVOKED` no se muestra.
 - Acciones:
   - Iniciar grabación.
   - Detener y transcribir.
@@ -183,12 +187,18 @@ Se envía el `Blob` con el MIME elegido. El backend acepta los formatos listados
   - Insertar igualmente.
   - Mostrar advertencia.
   - Bloquear “Revisar” hasta que se reduzca.
-- Si la transcripción falla:
+- Si la transcripción falla, incluido un 429 o bloqueo del proveedor:
   - Conservar el `Blob` en memoria.
   - Mostrar “Reintentar” y “Regrabar”.
   - Al reintentar, reenviar el mismo `Blob`; no volver a grabar.
+  - No contar la operación.
+- Consentimiento:
+  - Si el estado es `NOT_SET`, al pulsar el micrófono se muestra `AiConsentDialog`; aceptar inicia la grabación, rechazar abre el modo manual y cerrar no registra decisión, no inicia la grabación y vuelve a preguntar en el próximo intento.
+  - Si el estado es `DENIED` o `REVOKED`, el micrófono queda oculto o deshabilitado y se indica que la IA se habilita desde el perfil.
+  - Si el backend responde 428, se trata como consentimiento no vigente y se muestra el diálogo o el modo manual según el estado.
 - Si el usuario cancela, abandona la captura, guarda o revoca el consentimiento:
   - Descartar el `Blob`.
+  - Si estaba transcribiendo, descartar la respuesta tardía y no contar la operación.
 - En móvil o táctil:
   - No mostrar `MicButton`.
   - Mostrar pista “Usa el dictado de tu teclado”.
@@ -208,7 +218,6 @@ Se envía el `Blob` con el MIME elegido. El backend acepta los formatos listados
 `POST /ai/transcribe` (multipart):
 
 - `audio`: archivo.
-- `zoneId`: texto opcional.
 
 Respuesta 200:
 
@@ -239,24 +248,30 @@ AI_TRANSCRIPTION_TIMEOUT_MS=30000
 4. **Multipart** en lugar de base64 en JSON. Alternativa descartada: base64; aumenta el tamaño y el costo de memoria.
 5. **Detección por puntero fino y ancho** en lugar de user-agent. Alternativa descartada: user-agent; frágil y difícil de testear.
 6. **Límite de 60 s en el cliente** con validación de tamaño/formato en servidor. Alternativa descartada: decodificar audio en servidor; requiere dependencias nuevas y no aporta al alcance.
-7. **Una transcripción con texto cuenta como operación**; una vacía no cuenta. Alternativa descartada: contar intentos; penaliza al usuario por fallos del proveedor.
+7. **Una transcripción válida con texto cuenta como operación**; una vacía, inválida, cancelada o fallida no cuenta. Alternativa descartada: contar intentos; penaliza al usuario por fallos del proveedor.
 8. **La transcripción solo llena el texto**. Alternativa descartada: interpretar directamente el audio; duplica el flujo y oculta la revisión.
+9. **Cuota con zona del servidor** compartida con 011a. Alternativa descartada: zona del navegador; manipulable para reiniciar la cuota.
+10. **Consentimiento `NOT_SET` solicita diálogo; `DENIED`/`REVOKED` abre manual**. Alternativa descartada: pedir siempre; molesta a quien ya rechazó.
+11. **Revalidar consentimiento antes de responder y descartar respuestas tardías**. Alternativa descartada: confiar en la comprobación previa; una revocación durante la request devolvería datos no autorizados.
+12. **Errores 429 y bloqueos del proveedor como 502 genérico sin cuota**. Alternativa descartada: exponer el código del proveedor; filtra detalles y confunde con la cuota propia.
+13. **Logs mínimos sin audio, texto, etiquetas, zona ni cuenta**. Alternativa descartada: registrar identificadores para soporte; expone datos personales.
+14. **Benchmark manual de RNF-1**. Alternativa descartada: p95 en CI con proveedor externo; inestable y no reproducible.
 
 ## 7. Estrategia de tests
 
 Backend:
 
 - `GroqTranscriptionClientTest` con `MockRestServiceServer` o un fake `RestClient`: multipart, modelo, language, respuesta y timeout.
-- `TranscriptionServiceTest`: consentimiento, cuota, texto vacío, éxito, error del proveedor, no persistencia, no logs.
-- `TranscriptionControllerTest`: multipart válido, archivo ausente, formato no permitido, tamaño excesivo, 428, 429, 502, 503, 504, USER/ADMIN.
-- Reutilizar los tests de `AiConsentService` y `AiUsageService`.
+- `TranscriptionServiceTest`: consentimiento `NOT_SET`/`DENIED`/`REVOKED`, versión, cuota con zona del servidor, texto vacío, éxito, error del proveedor, 429 del proveedor, revocación durante la request, no persistencia y no logs.
+- `TranscriptionControllerTest`: multipart válido, archivo ausente, formato no permitido, tamaño excesivo, 428, 429, 502, 503, 504, USER/ADMIN; un 429 del proveedor no consume cuota.
+- Reutilizar los tests de `AiConsentService` y `AiUsageService`; verificar que no se registran audio, texto, etiquetas, zona ni cuenta en logs.
 
 Frontend:
 
 - `useAudioRecorder`: inicio, permiso, MIME, stop, auto-stop a 60 s, cancelación, limpieza al desmontar, errores.
-- `MicButton`: visible/invisible según media query, teclado, estados, `aria-live`, consentimiento.
-- `CaptureSheet`: inserción en cursor/selección/final, texto >2500, reintento con el mismo blob, regrabar, descarte al cancelar/abandonar/revocar.
-- `captureApi`: multipart, auth, refresh en 401, errores.
+- `MicButton`: visible/invisible según media query, teclado, estados, `aria-live`, consentimiento `NOT_SET`/`DENIED`/`REVOKED`, cierre sin decisión y versión nueva.
+- `CaptureSheet`: inserción en cursor/selección/final, texto >2500, reintento con el mismo blob, regrabar, descarte al cancelar/abandonar/revocar, cancelación con Escape durante la transcripción y respuesta tardía descartada.
+- `captureApi`: multipart, auth, refresh en 401, errores 428/429/502/504.
 - `http.requestMultipart`: mismo comportamiento que `request`.
 - Móvil/táctil: sin micrófono propio, pista de dictado nativo.
 - Sin llamadas reales a Groq.
@@ -278,7 +293,11 @@ cd frontend && npm run build
 - El límite de 60 s es del cliente; un cliente manipulado puede enviar audio más largo. El servidor limita tamaño y formato, no duración.
 - Retención temporal de multipart en el servidor; se confía en la limpieza de Spring y no se escribe en una ruta propia.
 - Cuota y consentimiento compartidos con 011a; cualquier cambio en 011a impacta 011b.
+- La cuota se reinicia con la zona del servidor; la UI debe explicarlo si el usuario espera medianoche local.
+- El consentimiento cambia de versión o se revoca durante la request; se descarta la respuesta y no se cuenta.
+- Errores 429 o bloqueos del proveedor no deben confundirse con la cuota propia ni consumirla.
 - Accesibilidad de un control de grabación con estados cambiantes; se cubre con `aria-live` y teclado.
+- El benchmark de RNF-1 depende del proveedor y no se ejecuta en CI.
 
 ## 9. Trazabilidad RF
 
@@ -290,10 +309,10 @@ cd frontend && npm run build
 | RF-10..RF-15 | `CaptureSheet`, `useAudioRecorder`, `CaptureFlow` |
 | RF-16 | `useMediaQuery`, `CaptureSheet` |
 | RF-17, RF-18 | `MicButton`, `CaptureFlow`, `CaptureSheet` |
-| RF-19 | `TranscriptionService`, `AiUsageService` |
+| RF-19 | `TranscriptionService`, `AiUsageService` con zona del servidor y solo texto no vacío |
 | RF-20 | `SecurityConfig`, `TranscriptionController` |
 | RF-21..RF-23 | `MicButton`, `CaptureSheet`, `useAudioRecorder` |
-| RNF-1..RNF-9 | Timeout, cuota, logs, minimización, servidor, tests |
+| RNF-1..RNF-9 | Benchmark manual, timeout, cuota, logs, minimización, servidor, tests |
 
 ## 10. Fuera de este plan
 

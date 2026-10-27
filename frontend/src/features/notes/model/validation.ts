@@ -1,4 +1,5 @@
 import { notesCopy } from './copy'
+import type { NoteDraft } from '../capture/model/types'
 import type {
   ChecklistItemForm,
   CreateNotePayload,
@@ -15,6 +16,14 @@ export const LIMITS = {
   tagMin: 1,
   tagMax: 25,
 } as const
+
+export function countCodePoints(value: string): number {
+  return Array.from(value).length
+}
+
+export function firstCodePoints(value: string, max: number): string {
+  return Array.from(value).slice(0, max).join('')
+}
 
 function generateClientId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -38,15 +47,15 @@ export function isNoteEmpty(values: NoteFormValues): boolean {
 
 export function charCount(values: NoteFormValues): number {
   if (values.checklistMode) {
-    return values.checklistItems.reduce((total, item) => total + item.text.trim().length, 0)
+    return values.checklistItems.reduce((total, item) => total + countCodePoints(item.text.trim()), 0)
   }
-  return values.content.length
+  return countCodePoints(values.content)
 }
 
 export function validateNoteForm(values: NoteFormValues): FormErrors {
   const errors: FormErrors = {}
 
-  const titleLength = values.title.trim().length
+  const titleLength = countCodePoints(values.title.trim())
   if (titleLength < LIMITS.titleMin) {
     errors.title = notesCopy.errors.required
   } else if (titleLength > LIMITS.titleMax) {
@@ -58,7 +67,7 @@ export function validateNoteForm(values: NoteFormValues): FormErrors {
     if (items.length === 0) {
       errors.checklistItems = notesCopy.errors.checklistEmpty
     }
-  } else if (values.content.length > LIMITS.contentMax) {
+  } else if (countCodePoints(values.content) > LIMITS.contentMax) {
     errors.content = notesCopy.errors.contentTooLong
   }
 
@@ -78,6 +87,7 @@ function toRememberAt(value: string): string | null {
 export function buildCreatePayload(
   values: NoteFormValues,
   checklistItems: ChecklistItemForm[] | null,
+  idempotencyKey?: string,
 ): CreateNotePayload {
   return {
     title: values.title.trim(),
@@ -88,6 +98,7 @@ export function buildCreatePayload(
     isPinned: values.isPinned,
     isArchived: false,
     tagIds: values.tagIds,
+    idempotencyKey,
   }
 }
 
@@ -103,6 +114,31 @@ export function buildUpdatePayload(
     rememberAt: toRememberAt(values.rememberAt),
     isPinned: values.isPinned,
     tagIds: values.tagIds,
+  }
+}
+
+export function fallbackFormValues(text: string): NoteFormValues {
+  const trimmed = text.trim()
+  return {
+    ...emptyFormValues(),
+    title: firstCodePoints(trimmed, 60),
+    content: trimmed,
+  }
+}
+
+export function draftToFormValues(draft: NoteDraft): NoteFormValues {
+  return {
+    title: draft.title,
+    content: draft.content,
+    checklistMode: draft.checklistMode,
+    checklistItems: draft.checklistItems.map((item) => ({
+      clientId: generateClientId(),
+      text: item.text,
+      checked: item.checked,
+    })),
+    tagIds: draft.tagIds,
+    rememberAt: draft.rememberAt ? draft.rememberAt.slice(0, 16) : '',
+    isPinned: false,
   }
 }
 

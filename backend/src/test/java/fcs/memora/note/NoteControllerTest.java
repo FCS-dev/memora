@@ -112,6 +112,74 @@ class NoteControllerTest {
     }
 
     @Test
+    void shouldReturnExistingNoteForSameIdempotencyKey() throws Exception {
+        String token = createUserToken();
+        CreateNoteRequest request = new CreateNoteRequest(
+            "Title", "Content", false, null, null, false, false, null, "same-key"
+        );
+
+        String first = mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+
+        String firstUuid = objectMapper.readTree(first).get("uuidNote").asText();
+
+        mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.uuidNote").value(firstUuid));
+    }
+
+    @Test
+    void shouldRejectSameIdempotencyKeyWithDifferentData() throws Exception {
+        String token = createUserToken();
+        CreateNoteRequest first = new CreateNoteRequest(
+            "Title", "Content", false, null, null, false, false, null, "conflict-key"
+        );
+        CreateNoteRequest second = new CreateNoteRequest(
+            "Other", "Content", false, null, null, false, false, null, "conflict-key"
+        );
+
+        mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(first)))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(second)))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectAdminNoteCreation() throws Exception {
+        User admin = User.builder()
+            .uuidUser("admin-uuid-create")
+            .email("admin-create@example.com")
+            .name("Admin")
+            .passwordHash(passwordService.hashPassword("password123"))
+            .role(UserRole.ADMIN)
+            .userStatus(UserStatus.ACTIVE)
+            .build();
+        userRepository.save(admin);
+        String token = jwtService.generateAccessToken(admin);
+
+        mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                    new CreateNoteRequest("Title", "Content", false, null, null, false, false, null))))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldCreateChecklistNote() throws Exception {
         String token = createUserToken();
         CreateNoteRequest request = new CreateNoteRequest(

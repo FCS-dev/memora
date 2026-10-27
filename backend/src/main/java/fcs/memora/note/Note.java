@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,7 +27,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "notes")
+@Table(
+    name = "notes",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_notes_user_idempotency",
+        columnNames = {"user_id", "idempotency_key"}
+    )
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,6 +46,9 @@ public class Note {
 
     @Column(name = "uuid_note", nullable = false, unique = true, length = 36)
     private String uuidNote;
+
+    @Column(name = "idempotency_key", length = 36)
+    private String idempotencyKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

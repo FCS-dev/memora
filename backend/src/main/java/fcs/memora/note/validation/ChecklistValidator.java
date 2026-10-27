@@ -1,5 +1,6 @@
 package fcs.memora.note.validation;
 
+import fcs.memora.ai.CodePointLimits;
 import fcs.memora.note.dto.ChecklistItem;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
@@ -8,7 +9,7 @@ import java.util.List;
 
 public class ChecklistValidator implements ConstraintValidator<ValidChecklist, Object> {
 
-    private static final int MAX_KEYS_LENGTH = 2500;
+    private static final int MAX_TOTAL_CODE_POINTS = 2500;
 
     @Override
     public boolean isValid(Object value, ConstraintValidatorContext context) {
@@ -25,17 +26,18 @@ public class ChecklistValidator implements ConstraintValidator<ValidChecklist, O
         }
 
         boolean hasNonBlankText = false;
-        long totalLength = 0;
+        int totalCodePoints = 0;
         for (ChecklistItem item : items) {
             if (item == null || item.text() == null) {
                 continue;
             }
-            if (item.text().trim().length() >= 1) {
+            String text = item.text().trim();
+            if (!text.isEmpty()) {
                 hasNonBlankText = true;
             }
-            totalLength += item.text().length();
+            totalCodePoints += CodePointLimits.count(text);
         }
 
-        return hasNonBlankText && totalLength <= MAX_KEYS_LENGTH;
+        return hasNonBlankText && totalCodePoints <= MAX_TOTAL_CODE_POINTS;
     }
 }

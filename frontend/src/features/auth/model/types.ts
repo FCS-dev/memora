@@ -1,4 +1,5 @@
 export type Role = 'USER' | 'ADMIN'
+export type AiConsent = 'NOT_SET' | 'GRANTED' | 'DENIED' | 'REVOKED'
 
 export interface AuthUser {
   uuidUser: string
@@ -6,6 +7,10 @@ export interface AuthUser {
   name: string
   role: Role
   avatarColor: string | null
+  aiEnabled?: boolean
+  aiConsent?: AiConsent
+  aiConsentRequired?: boolean
+  aiConsentNoticeVersion?: string
 }
 
 export interface Session {
