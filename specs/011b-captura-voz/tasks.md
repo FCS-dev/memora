@@ -1,10 +1,12 @@
 # Tareas 011b — Captura de notas por voz
 
+> Canceladas: no implementar. Groq Whisper se descartó por costo; el dictado nativo en móvil se cubre en 011a (RF-36).
+
 Spec: `specs/011b-captura-voz/spec.md` (aprobada)
 Plan: `specs/011b-captura-voz/plan.md`
 
 - [ ] **T1. Spike de transcripción con Groq Whisper.** RNF-1, RNF-2, RNF-4
-- Hecho cuando: se confirma el endpoint, modelo, formatos de audio, tamaño y latencia con una clave real; `AiProperties` incluye la configuración de transcripción; el cliente puede sustituirse por un fake y la compatibilidad queda documentada en `docs/ai.md`.
+- Hecho cuando: se confirma el endpoint real `${GROQ_BASE_URL}/audio/transcriptions` (sin duplicar `/v1`), modelo, formatos de audio, tamaño y latencia con una clave real; `AiProperties` incluye la configuración de transcripción; el cliente puede sustituirse por un fake y la compatibilidad queda documentada en `docs/ai.md`.
 
 - [ ] **T2. Backend de transcripción.** RF-3, RF-4, RF-5, RF-10, RF-11, RF-14, RF-15, RF-19, RF-20, RNF-1..RNF-6
 - Hecho cuando: `POST /ai/transcribe` valida archivo, formato y tamaño; aplica consentimiento vigente y cuota con zona del servidor; devuelve `{text}`; solo una transcripción válida no vacía cuenta cuota; un 429 o bloqueo del proveedor responde 502 sin consumir cuota; revalida el consentimiento antes de responder; los errores 400/413/428/429/502/503/504 están mapeados; no se persiste ni se registra audio, texto, etiquetas, zona ni cuenta.
@@ -19,10 +21,10 @@ Plan: `specs/011b-captura-voz/plan.md`
 - Hecho cuando: el micrófono solo aparece con puntero fino y ancho >=768; con `NOT_SET` solicita consentimiento al pulsar, con `DENIED`/`REVOKED` queda oculto o deshabilitado y ofrece perfil; cerrar el diálogo no registra decisión ni inicia grabación; un cambio de versión vuelve a pedir consentimiento; es operable con teclado; anuncia grabación/transcripción/error; en móvil no se muestra y aparece la pista de dictado nativo.
 
 - [ ] **T6. Integración con CaptureSheet y reintentos.** RF-8, RF-9, RF-10, RF-11, RF-12, RF-13, RF-17, RF-18
-- Hecho cuando: la transcripción se inserta en cursor/selección o al final; no se envía automáticamente; si supera 2500 puntos de código se advierte y se bloquea la revisión; si falla se conserva el blob para reintentar y no cuenta cuota; cancelar con botón/Escape, abandonar o revocar descarta el audio y la respuesta tardía; los tests cubren todos los caminos.
+- Hecho cuando: la transcripción se inserta en cursor/selección o al final; no se envía automáticamente; si supera 2500 puntos de código se advierte y se bloquea la revisión; si falla se conserva el blob para reintentar y no cuenta cuota; cancelar con botón/Escape, abandonar o revocar descarta el audio y la respuesta tardía; click fuera pide confirmación si hay texto/audio, confirmar descarta el blob y grabando/transcribiendo el backdrop no cierra; los tests cubren todos los caminos.
 
 - [ ] **T7. Responsive, móvil y movimiento reducido.** RF-16, RF-22, RF-23
 - Hecho cuando: el flujo no desborda entre 390 y 2560 px, con 320 px y zoom 200 % como regresión no bloqueante; el micrófono se oculta en táctil; los estados respetan `prefers-reduced-motion`; los tests de media query y teclado pasan.
 
 - [ ] **T8. Cierre de la spec.** RNF-7, RNF-8, RNF-9
-- Hecho cuando: `.env.example` y `docs/ai.md` incluyen la transcripción; el benchmark manual de 20 grabaciones queda documentado; pasan `mvn test`, `npm run test`, `npm run lint` y `npm run build`; se actualiza `MEMORY.md` y se verifica manualmente el flujo en escritorio y móvil.
+- Hecho cuando: `.env.example` y `docs/ai.md` incluyen la transcripción y la base URL con `/v1`; el benchmark manual de 20 grabaciones queda documentado; se verifica el flujo completo con 011a (título generado, fechas y 422 fuera de alcance); pasan `mvn test`, `npm run test`, `npm run lint` y `npm run build`; se actualiza `MEMORY.md` y se verifica manualmente el flujo en escritorio y móvil.

@@ -19,6 +19,11 @@ function renderSheet(text: string, onCancel = vi.fn()) {
 }
 
 describe('CaptureSheet', () => {
+  it('muestra la pista de dictado nativo en móvil/táctil', () => {
+    renderSheet('')
+    expect(screen.getByText(captureCopy.mobileDictationHint)).toBeInTheDocument()
+  })
+
   it('cierra al hacer click fuera si el texto está vacío', async () => {
     const onCancel = vi.fn()
     renderSheet('', onCancel)

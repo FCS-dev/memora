@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { ConfirmDialog } from '../../../../shared/components/ConfirmDialog'
 import { useModalBehavior } from '../../../../shared/hooks/useModalBehavior'
+import { useMediaQuery } from '../../../../shared/hooks/useMediaQuery'
 import { captureCopy } from '../model/copy'
 import { countCodePoints } from '../../model/validation'
 
@@ -42,6 +43,7 @@ export function CaptureSheet({
   }
 
   useModalBehavior({ open: true, containerRef: modalRef, onClose: requestClose })
+  const showDictationHint = useMediaQuery('(pointer: coarse), (max-width: 767px)')
   const count = countCodePoints(text)
   const overLimit = count > MAX
 
@@ -76,6 +78,9 @@ export function CaptureSheet({
           {text.trim() === '' ? <span className="text-error">{captureCopy.empty}</span> : null}
           {overLimit ? <span className="text-error">{captureCopy.tooLong}</span> : null}
         </div>
+        {showDictationHint ? (
+          <p className="text-xs text-neutral">{captureCopy.mobileDictationHint}</p>
+        ) : null}
         {error ? <p role="alert" className="text-sm text-error">{error}</p> : null}
         <p aria-live="polite" className="text-sm text-neutral">
           {status === 'interpreting' ? captureCopy.interpreting : ''}

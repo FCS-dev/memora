@@ -8,7 +8,7 @@ Memora permite crear notas mediante un formulario con título, contenido, record
 
 El objetivo de esta spec es permitir que el usuario escriba una frase y obtenga un borrador de nota editable. El borrador nunca se guarda automáticamente: el usuario siempre lo revisa antes de confirmar.
 
-Esta spec cubre solo la captura por texto. Define además el consentimiento y la cuota compartidos que reutiliza la Spec 011b; la transcripción de audio se implementa y verifica en 011b. MCP, búsqueda asistida, documentos, RAG y el asistente conversacional quedan fuera de alcance.
+Esta spec cubre la captura por texto. El micrófono propio y la transcripción externa con Whisper se descartaron por costo; en móvil o táctil se usa el dictado por voz del teclado del sistema, que inserta texto en esta misma captura. MCP, búsqueda asistida, documentos, RAG y el asistente conversacional quedan fuera de alcance.
 
 ## Usuarios
 
@@ -31,11 +31,11 @@ Esta spec cubre solo la captura por texto. Define además el consentimiento y la
 - **Interpretación:** proceso que convierte el texto de la captura en un borrador estructurado.
 - **Borrador:** propuesta de nota con título, contenido, checklist, recordatorio y etiquetas sugeridas. No está persistida.
 - **Etiqueta existente:** etiqueta global o privada visible para el usuario y que puede asociarse a la nota.
-- **Consentimiento:** autorización explícita y versionada del usuario para enviar texto, audio, zona horaria y etiquetas necesarias a un servicio externo de IA. Un mismo consentimiento cubre texto y audio.
-- **Proveedor externo de IA:** servicio configurado para interpretar texto o transcribir audio. En esta fase se usa Groq.
-- **Modo manual:** creación de la nota completando el editor sin interpretación ni transcripción.
+- **Consentimiento:** autorización explícita y versionada del usuario para enviar texto, zona horaria y etiquetas necesarias a un servicio externo de IA.
+- **Proveedor externo de IA:** servicio configurado para interpretar texto. En esta fase se usa Groq.
+- **Modo manual:** creación de la nota completando el editor sin interpretación de IA.
 - **Solicitud fuera de alcance:** texto que no describe una nota, recordatorio, tarea o checklist, como una pregunta general, una traducción, un cálculo o una petición de código.
-- **Operación de IA completada:** interpretación o transcripción cuya respuesta el proveedor devuelve y el sistema logra parsear y validar. Incluye las interpretaciones con varias intenciones. No cuentan los errores, las cancelaciones, las respuestas inválidas ni las transcripciones vacías.
+- **Operación de IA completada:** interpretación cuya respuesta el proveedor devuelve y el sistema logra parsear y validar. Incluye las interpretaciones con varias intenciones. No cuentan los errores, las cancelaciones ni las respuestas inválidas.
 - **Fecha de recordatorio:** expresión que permite resolver una fecha en la zona horaria indicada. Si no incluye hora, se usa la medianoche local.
 - **Día de cuota:** período diario calculado con la zona horaria del servidor.
 
@@ -46,13 +46,13 @@ Esta spec cubre solo la captura por texto. Define además el consentimiento y la
 - RF-1: EL SISTEMA debe ofrecer, en la vista de notas, una acción principal de captura en lenguaje natural ubicada antes de la lista y visible sin desplazamiento inicial en viewports de 390×844 px y 1280×800 px.
 - RF-2: CUANDO el usuario abra la captura, EL SISTEMA debe mostrar un campo de texto libre, un contador de puntos de código Unicode y las acciones para revisar o pasar al modo manual.
 - RF-3: EL SISTEMA debe aceptar capturas de 1 a 2500 puntos de código Unicode después de recortar espacios externos; SI el texto queda vacío o supera ese límite, ENTONCES EL SISTEMA debe bloquear la revisión, mostrar la causa y permitir editarlo hasta que sea válido.
-- RF-4: CUANDO el usuario realice la primera interpretación con la IA activa y su consentimiento esté sin decidir, EL SISTEMA debe solicitar un consentimiento explícito único que cubra texto y audio; SI el usuario acepta, ENTONCES debe registrar el consentimiento y continuar; SI rechaza, ENTONCES debe registrar el rechazo y abrir el modo manual; SI cierra o cancela el diálogo sin aceptar ni rechazar, ENTONCES no debe registrar una decisión, debe abrir el modo manual para ese intento y debe volver a solicitar el consentimiento en la siguiente interpretación.
-- RF-5: SI el usuario rechaza el consentimiento, ENTONCES EL SISTEMA debe permitir la captura manual y no enviar texto ni audio a ningún servicio externo de IA.
+- RF-4: CUANDO el usuario realice la primera interpretación con la IA activa y su consentimiento esté sin decidir, EL SISTEMA debe solicitar un consentimiento explícito único que cubra el texto enviado; SI el usuario acepta, ENTONCES debe registrar el consentimiento y continuar; SI rechaza, ENTONCES debe registrar el rechazo y abrir el modo manual; SI cierra o cancela el diálogo sin aceptar ni rechazar, ENTONCES no debe registrar una decisión, debe abrir el modo manual para ese intento y debe volver a solicitar el consentimiento en la siguiente interpretación.
+- RF-5: SI el usuario rechaza el consentimiento, ENTONCES EL SISTEMA debe permitir la captura manual y no enviar texto a ningún servicio externo de IA.
 - RF-6: EL SISTEMA debe recordar la decisión de consentimiento por cuenta en el servidor, de modo que se comparta entre dispositivos; no debe volver a solicitarla mientras la versión del aviso siga vigente y el usuario no la cambie; SI cambia la versión del aviso y el último estado era `GRANTED`, ENTONCES debe solicitar un nuevo consentimiento una vez; SI el último estado era `DENIED` o `REVOKED`, ENTONCES debe mantener el modo manual y no volver a preguntar automáticamente.
 - RF-7: EL SISTEMA debe permitir al usuario cambiar su decisión de consentimiento desde su perfil; SI la revoca, ENTONCES EL SISTEMA debe desactivar la IA de inmediato, descartar cualquier respuesta de IA en curso y no contabilizarla como operación completada.
 - RF-8: EL SISTEMA debe registrar un historial de consentimiento con la decisión (`GRANTED`, `DENIED` o `REVOKED`), la fecha y la versión del aviso; cerrar el diálogo sin aceptar ni rechazar no debe generar un evento.
 - RF-9: SI la IA está desactivada, el usuario rechazó el consentimiento o lo revocó, ENTONCES la captura debe abrir el editor manual, ocultar o deshabilitar las acciones de IA con una explicación y mantener disponible el guardado manual; la IA solo puede habilitarse desde el perfil.
-- RF-10: EL SISTEMA debe mostrar un aviso de privacidad versionado que nombre a Groq como proveedor externo, indique que el texto, el audio, la zona horaria y las etiquetas necesarias se envían a ese servicio y aclare que el modo manual no envía datos.
+- RF-10: EL SISTEMA debe mostrar un aviso de privacidad versionado que nombre a Groq como proveedor externo, indique que el texto, la zona horaria y las etiquetas necesarias se envían a ese servicio y aclare que el modo manual y el dictado nativo del teclado no envían datos a Groq por sí mismos.
 - RF-11: EL SISTEMA no debe registrar en logs el texto de la captura, el borrador, el contenido de la nota, las etiquetas, la zona horaria, el identificador de cuenta ni respuestas del proveedor; los logs solo pueden contener la operación, el estado, la latencia y un identificador de correlación.
 
 ### Captura por texto
@@ -74,10 +74,11 @@ Esta spec cubre solo la captura por texto. Define además el consentimiento y la
 - RF-26: MIENTRAS la interpretación esté en curso, EL SISTEMA debe mostrar un estado de carga, impedir envíos duplicados y permitir cancelar con un botón y con la tecla Escape; al cancelar debe descartar la respuesta tardía y no contar la operación.
 - RF-27: EL SISTEMA debe conservar el texto original recortado durante la revisión y permitir consultarlo completo, incluso después de editar el borrador o de aplicar el fallback.
 - RF-28: EL SISTEMA debe evitar que una misma confirmación cree más de una nota: debe bloquear el botón de guardado mientras se procesa y el servidor debe devolver la nota existente cuando reciba la misma clave de idempotencia, el mismo usuario y los mismos datos de la nota; SI la clave se reutiliza con datos distintos, ENTONCES debe rechazar la solicitud.
-- RF-29: EL SISTEMA debe permitir un máximo de 50 operaciones de IA completadas por usuario y por día, contando interpretaciones y transcripciones, con reinicio a la medianoche de la zona horaria del servidor; SI se alcanza el límite, ENTONCES EL SISTEMA debe informar y ofrecer el modo manual. Solo cuentan las respuestas parseadas y validadas; no cuentan los errores, las cancelaciones, las respuestas inválidas ni las transcripciones vacías.
+- RF-29: EL SISTEMA debe permitir un máximo de 50 interpretaciones de IA completadas por usuario y por día, con reinicio a la medianoche de la zona horaria del servidor; SI se alcanza el límite, ENTONCES EL SISTEMA debe informar y ofrecer el modo manual. Solo cuentan las respuestas parseadas y validadas; no cuentan los errores, las cancelaciones ni las respuestas inválidas.
 - RF-30: EL SISTEMA debe rechazar la interpretación y la creación de notas cuando no haya una sesión de USER activa y no debe permitir que ADMIN cree notas.
 - RF-34: SI el texto no describe una nota, recordatorio, tarea o checklist, ENTONCES EL SISTEMA no debe responderlo, explicarlo, traducirlo, calcularlo ni generar código; debe informar que está fuera de alcance, conservar el texto, ofrecer el modo manual y no consumir cuota ni devolver contenido generado por el proveedor.
 - RF-35: CUANDO el usuario haga click fuera del modal de captura, EL SISTEMA debe cerrarlo; SI hay texto escrito, ENTONCES debe pedir confirmación antes de descartarlo.
+- RF-36: En móvil o dispositivos táctiles, EL SISTEMA debe mostrar una pista discreta para usar el dictado por voz del teclado del sistema; el texto dictado debe insertarse en el campo de captura y seguir el flujo normal de revisión.
 
 ### Interfaz y accesibilidad
 
@@ -137,14 +138,14 @@ Esta spec cubre solo la captura por texto. Define además el consentimiento y la
 - No hay conexión a internet o el proveedor está caído.
 - La IA está desactivada globalmente.
 - El usuario alcanza el límite diario.
-- El usuario intenta usar una captura por voz; se deriva a la Spec 011b.
+- El usuario usa el dictado nativo del teclado en móvil o táctil y el texto aparece en la captura.
 - El borrador corresponde a un recordatorio, una checklist o contenido general; el título debe reflejar el tipo y la fecha de solicitud.
 - El usuario pide código, una pregunta general, una traducción, un cálculo o una explicación en lugar de una nota.
 - El usuario hace click fuera del modal de captura con texto escrito o con el campo vacío.
 
 ## Fuera de alcance
 
-- La implementación de la transcripción de audio; se define en la Spec 011b. Esta spec solo define el consentimiento y la cuota compartidos.
+- Micrófono propio y transcripción externa con Whisper; descartados por costo. En móvil se usa el dictado nativo del teclado.
 - MCP y herramientas de notas.
 - Asistente conversacional.
 - Búsqueda o edición de notas existentes mediante lenguaje natural.
@@ -181,6 +182,7 @@ Esta spec cubre solo la captura por texto. Define además el consentimiento y la
 - [x] La interfaz es usable con teclado, lector de pantalla y entre 390 px y 2560 px.
 - [x] Las solicitudes de código, preguntas generales, traducciones y cálculos no se responden ni se convierten en contenido de IA; se informa, se conserva el texto y no consumen cuota.
 - [x] Hacer click fuera del modal cierra la captura; con texto escrito pide confirmación antes de descartarlo.
+- [x] En móvil o táctil se muestra una pista discreta para usar el dictado nativo y el texto dictado entra en la captura.
 - [x] Las fechas relativas como “este viernes a las 11”, “el viernes”, “mañana”, “en 3 días” o “quincena de noviembre” se resuelven en el servidor; sin hora usan las 00:00 locales.
 - [x] El benchmark manual de RNF-1 queda documentado y los tests del backend y del frontend pasan; lint y build están en verde.
 

@@ -1,12 +1,16 @@
 # Spec 011b — Captura de notas por voz
 
-Estado: aprobada
+> Cancelada: Groq Whisper se descartó por costo. No hay micrófono propio, audio, transcripción externa ni backend de voz. En móvil se usa el dictado nativo del teclado dentro de la captura de la Spec 011a. Se conserva el documento como historial.
+
+Estado: cancelada
 
 ## Contexto y objetivo
 
 La Spec 011a define la captura de notas en lenguaje natural por texto, el consentimiento, el borrador y la revisión antes de guardar. Esta spec agrega la voz como forma de llenar ese texto: en escritorio mediante el micrófono de la app y en móvil mediante el dictado nativo del teclado del sistema.
 
 La voz no crea, guarda, busca, edita, elimina ni reordena notas. Solo produce texto para que el usuario lo revise y continúe con el flujo de la Spec 011a.
+
+La interpretación, el título generado, la resolución de fechas y el bloqueo de contenido fuera de alcance se rigen por la Spec 011a. Esta spec no responde preguntas ni genera contenido a partir del audio.
 
 ## Usuarios
 
@@ -61,6 +65,11 @@ La voz no crea, guarda, busca, edita, elimina ni reordena notas. Solo produce te
 - RF-19: EL SISTEMA debe contar cada transcripción válida y con texto no vacío como una operación de IA para el límite diario definido en la Spec 011a; el reinicio diario usa la zona del servidor; los errores, cancelaciones, respuestas inválidas y transcripciones vacías no cuentan; la interpretación posterior del texto cuenta como otra operación.
 - RF-20: EL SISTEMA debe rechazar la captura por voz cuando no haya una sesión de USER activa y no debe permitir que ADMIN use el micrófono.
 
+### Integración con 011a y cierre
+
+- RF-24: CUANDO el usuario haga click fuera del modal de captura, EL SISTEMA debe aplicar el cierre de RF-35 de la Spec 011a; SI hay texto o audio pendiente, ENTONCES debe pedir confirmación antes de descartarlo; al confirmar debe detener la grabación, descartar el audio y cualquier respuesta tardía; MIENTRAS grabe o transcriba, el click fuera no debe cerrar el modal y la acción explícita debe ser cancelar.
+- RF-25: La transcripción no debe interpretar, responder, explicar, traducir, calcular ni generar código; solo debe llenar el texto de la captura. La interpretación posterior se rige por la Spec 011a, incluido el rechazo de contenido fuera de alcance, el título generado y la resolución de fechas.
+
 ### Interfaz y accesibilidad
 
 - RF-21: EL SISTEMA debe permitir iniciar, detener y cancelar la grabación con teclado, mostrar foco visible y anunciar al lector de pantalla los estados de grabación, transcripción, error y cancelación.
@@ -105,6 +114,9 @@ La voz no crea, guarda, busca, edita, elimina ni reordena notas. Solo produce te
 - La sesión expira, la cuenta se bloquea o se deshabilita durante la grabación o transcripción.
 - El usuario está en un dispositivo compartido y otro usuario usa la misma sesión de navegador.
 - El usuario intenta ejecutar una acción de nota mediante la voz.
+- El usuario hace click fuera del modal con texto o audio pendiente, o mientras graba o transcribe.
+- El audio contiene una pregunta, una traducción, un cálculo o una petición de código.
+- La interpretación posterior genera un título de recordatorio, lista o contenido.
 - El consentimiento está sin decidir, se cierra el diálogo o cambia la versión del aviso.
 - El usuario cambia la zona horaria del navegador para intentar reiniciar la cuota; la cuota no cambia.
 - El proveedor devuelve 429 o bloquea el audio por políticas; no se consume cuota.
@@ -147,8 +159,10 @@ La voz no crea, guarda, busca, edita, elimina ni reordena notas. Solo produce te
 - [ ] El límite diario se aplica con la zona del servidor y se informa sin bloquear el modo manual.
 - [ ] La interfaz es usable entre 390 px y 2560 px; 320 px y zoom 200 % se verifican como regresión no bloqueante.
 - [ ] El benchmark manual de RNF-1 queda documentado.
+- [ ] Hacer click fuera del modal pide confirmación si hay texto o audio; al confirmar se detiene la grabación y se descarta el audio.
+- [ ] La transcripción no responde preguntas ni genera código; la interpretación posterior aplica el alcance, el título y las fechas de la Spec 011a.
 - [ ] Los tests del backend y del frontend pasan; lint y build están en verde.
 
 ## Dudas abiertas
 
-Ninguna. Las decisiones de disponibilidad, consentimiento, retención temporal, reintento, cuota, logs y límites quedaron cerradas con el usuario y alineadas con la Spec 011a.
+Ninguna. Las decisiones de disponibilidad, consentimiento, retención temporal, reintento, cuota, logs, cierre del modal y límites quedaron cerradas con el usuario y alineadas con la Spec 011a.

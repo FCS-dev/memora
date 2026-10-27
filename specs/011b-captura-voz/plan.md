@@ -1,9 +1,11 @@
 # Plan 011b — Captura de notas por voz
 
-Estado: borrador revisado; pendiente de aprobación final
+> Cancelado por costo de Groq Whisper. No se implementará audio, micrófono propio, transcripción externa ni `/ai/transcribe`. El dictado nativo en móvil queda cubierto por RF-36 de la Spec 011a.
+
+Estado: cancelado
 
 Spec: `specs/011b-captura-voz/spec.md` (aprobada)
-Spec base: `specs/011a-captura-texto/spec.md` (aprobada)
+Spec base: `specs/011a-captura-texto/spec.md` (implementada)
 
 Esta entrega agrega la voz como forma de llenar el texto de la captura. Reutiliza el consentimiento, la cuota, el flujo de captura y el editor definidos en la Spec 011a. No crea ni modifica notas por sí sola.
 
@@ -51,7 +53,7 @@ String transcribe(byte[] audio, String mimeType, String fileName);
 `GroqTranscriptionClient`:
 
 - Usa `RestClient` con `Authorization: Bearer ${GROQ_API_KEY}`.
-- `POST ${GROQ_BASE_URL}/v1/audio/transcriptions` con `multipart/form-data`:
+- `POST ${GROQ_BASE_URL}/audio/transcriptions` con `multipart/form-data` (`GROQ_BASE_URL` ya incluye `/v1`):
   - `file`: audio.
   - `model`: `AiProperties.transcriptionModel`.
   - `language`: `es`.
@@ -120,7 +122,7 @@ Modificar:
 
 - `shared/lib/http.ts`: agregar `requestMultipart<T>(path, formData, options)` con el mismo manejo de token, refresh y 401 que `request`.
 - `features/notes/capture/api/captureApi.ts`: `transcribeAudio(blob)`.
-- `features/notes/capture/components/CaptureSheet.tsx`: integrar el micrófono y la inserción del texto.
+- `features/notes/capture/components/CaptureSheet.tsx`: integrar el micrófono, la inserción del texto, el cierre por click fuera y la confirmación si hay texto o audio pendiente.
 - `features/notes/capture/components/MicButton.tsx`: control de grabación.
 - `features/notes/capture/hooks/useAudioRecorder.ts`: grabación, estados, límites y limpieza.
 - `features/notes/capture/model/types.ts`: `RecordingStatus`, `TranscriptionResponse`.
@@ -128,7 +130,7 @@ Modificar:
 - `features/notes/capture/model/errors.ts`: mapeo de errores de transcripción.
 - `features/notes/capture/model/audio.ts`: selección de MIME y funciones puras.
 - `features/notes/capture/components/AiConsentDialog.tsx`: reutilizado de 011a.
-- `features/notes/capture/components/CaptureFlow.tsx`: conserva el blob para reintentar y lo descarta al salir.
+- `features/notes/capture/components/CaptureFlow.tsx`: conserva el blob para reintentar, lo descarta al confirmar el cierre y aplica el flujo de alcance/título/fechas de 011a.
 
 ### 4.2 Selección de formato
 
@@ -203,6 +205,12 @@ Se envía el `Blob` con el MIME elegido. El backend acepta los formatos listados
   - No mostrar `MicButton`.
   - Mostrar pista “Usa el dictado de tu teclado”.
   - Aceptar el texto que el teclado inserte en el `textarea`.
+- `CaptureSheet` recibe `hasPendingData` y `isBusy`; `CaptureFlow` pasa `text.trim() !== '' || hasAudio` y el estado de grabación/transcripción.
+- Cierre:
+  - Click fuera con texto o audio pendiente -> `ConfirmDialog`.
+  - Confirmar -> detener grabación, descartar blob/respuesta tardía y cerrar.
+  - Cancelar el diálogo -> seguir en la captura.
+  - Grabando o transcribiendo -> backdrop/Escape no cierran; usar “Cancelar”.
 
 ### 4.6 Funciones puras
 
@@ -256,6 +264,9 @@ AI_TRANSCRIPTION_TIMEOUT_MS=30000
 12. **Errores 429 y bloqueos del proveedor como 502 genérico sin cuota**. Alternativa descartada: exponer el código del proveedor; filtra detalles y confunde con la cuota propia.
 13. **Logs mínimos sin audio, texto, etiquetas, zona ni cuenta**. Alternativa descartada: registrar identificadores para soporte; expone datos personales.
 14. **Benchmark manual de RNF-1**. Alternativa descartada: p95 en CI con proveedor externo; inestable y no reproducible.
+15. **Cierre con confirmación si hay texto o audio pendiente**. Alternativa descartada: cerrar siempre con el backdrop; se perdería una grabación o transcripción.
+16. **Backdrop bloqueado durante grabación/transcripción**. Alternativa descartada: cancelar implícitamente la operación; el usuario debe usar “Cancelar”.
+17. **La interpretación posterior, el título y las fechas son de 011a**. Alternativa descartada: duplicar esas reglas en 011b; se desincronizarían.
 
 ## 7. Estrategia de tests
 
@@ -270,10 +281,11 @@ Frontend:
 
 - `useAudioRecorder`: inicio, permiso, MIME, stop, auto-stop a 60 s, cancelación, limpieza al desmontar, errores.
 - `MicButton`: visible/invisible según media query, teclado, estados, `aria-live`, consentimiento `NOT_SET`/`DENIED`/`REVOKED`, cierre sin decisión y versión nueva.
-- `CaptureSheet`: inserción en cursor/selección/final, texto >2500, reintento con el mismo blob, regrabar, descarte al cancelar/abandonar/revocar, cancelación con Escape durante la transcripción y respuesta tardía descartada.
+- `CaptureSheet`: inserción en cursor/selección/final, texto >2500, reintento con el mismo blob, regrabar, descarte al cancelar/abandonar/revocar, click fuera con confirmación si hay texto/audio, backdrop bloqueado mientras graba/transcribe, cancelación con Escape durante la transcripción y respuesta tardía descartada.
 - `captureApi`: multipart, auth, refresh en 401, errores 428/429/502/504.
 - `http.requestMultipart`: mismo comportamiento que `request`.
 - Móvil/táctil: sin micrófono propio, pista de dictado nativo.
+- Integración con 011a: 422 fuera de alcance conserva el texto y abre el editor manual; el título y las fechas los genera 011a.
 - Sin llamadas reales a Groq.
 
 Comandos:
@@ -297,6 +309,10 @@ cd frontend && npm run build
 - El consentimiento cambia de versión o se revoca durante la request; se descarta la respuesta y no se cuenta.
 - Errores 429 o bloqueos del proveedor no deben confundirse con la cuota propia ni consumirla.
 - Accesibilidad de un control de grabación con estados cambiantes; se cubre con `aria-live` y teclado.
+- El click fuera con audio pendiente debe descartar el blob; si se olvida, queda audio en memoria hasta abandonar la captura.
+- La base URL de Groq incluye `/v1`; el endpoint de audio no debe volver a agregarlo.
+- El texto transcrito puede ser una pregunta o código; 011a debe rechazarlo antes de interpretar y no devolver contenido.
+- El título y las fechas no se generan en 011b; cualquier cambio en 011a debe reflejarse en la integración.
 - El benchmark de RNF-1 depende del proveedor y no se ejecuta en CI.
 
 ## 9. Trazabilidad RF
@@ -312,6 +328,8 @@ cd frontend && npm run build
 | RF-19 | `TranscriptionService`, `AiUsageService` con zona del servidor y solo texto no vacío |
 | RF-20 | `SecurityConfig`, `TranscriptionController` |
 | RF-21..RF-23 | `MicButton`, `CaptureSheet`, `useAudioRecorder` |
+| RF-24 | `CaptureSheet`, `ConfirmDialog`, `useAudioRecorder.cancel()` |
+| RF-25 | Flujo de texto de 011a, `NoteScopeGuard`, `isMemoraNote`, título/fechas de 011a |
 | RNF-1..RNF-9 | Benchmark manual, timeout, cuota, logs, minimización, servidor, tests |
 
 ## 10. Fuera de este plan

@@ -15,6 +15,7 @@ export const captureCopy = {
   quota: 'Alcanzaste el límite diario de IA. Puedes continuar en modo manual.',
   providerError: 'No se pudo interpretar el texto. Se abrió el editor manual.',
   outOfScope: 'Solo puedo convertir notas, recordatorios y tareas. No respondo preguntas ni genero contenido.',
+  mobileDictationHint: 'Puedes usar el dictado por voz de tu teclado',
   confirmDiscardTitle: 'Descartar captura',
   confirmDiscardMessage: '¿Seguro que quieres cerrar? Se perderá el texto que escribiste.',
   multipleIntents: 'El texto parece contener varias intenciones. Estructúralo en el editor.',
@@ -23,7 +24,7 @@ export const captureCopy = {
   consent: {
     title: 'Uso de inteligencia artificial',
     version: 'Aviso versión',
-    body: 'Para interpretar tu nota se envían el texto, el audio, la zona horaria y las etiquetas necesarias a Groq. El modo manual no envía datos.',
+    body: 'Para interpretar tu nota se envían el texto, la zona horaria y las etiquetas necesarias a Groq. El modo manual y el dictado nativo del teclado no envían datos por sí mismos.',
     accept: 'Aceptar y continuar',
     reject: 'Rechazar',
     close: 'Cerrar',

@@ -4,7 +4,7 @@ Estado: implementado
 
 Spec: `specs/011a-captura-texto/spec.md` (aprobada)
 
-Dependencias aprobadas: Groq y Spring AI. La Spec 011b reutiliza el consentimiento, la cuota y el flujo de captura definidos aquí.
+Dependencias aprobadas: Groq y Spring AI. El micrófono propio y Whisper se descartaron por costo; el dictado nativo en móvil se apoya en el teclado del sistema y reutiliza esta captura.
 
 ## 1. Alcance y principios
 
@@ -62,7 +62,7 @@ Entidad `AiConsentEvent` (tabla `ai_consent_events`):
 - `id`, `user_id`, `action` (`GRANTED`, `DENIED`, `REVOKED`), `notice_version`, `created_at`.
 - Es append-only: el estado actual se obtiene del último evento.
 - Cerrar el diálogo sin aceptar ni rechazar no crea evento; el estado sigue siendo `NOT_SET`.
-- No contiene texto, audio, etiquetas ni zona horaria. Se conserva mientras exista la cuenta, se elimina con ella y no se expone a ADMIN.
+- No contiene texto, etiquetas ni zona horaria. Se conserva mientras exista la cuenta, se elimina con ella y no se expone a ADMIN.
 
 `AiConsentService`:
 
@@ -104,7 +104,7 @@ Entidad `AiUsage` (tabla `ai_usage`):
 - `void check(User user)`: si el contador alcanzó `dailyLimit`, lanza `AiQuotaExceededException`.
 - `void recordSuccess(User user)`: incrementa el contador después de una operación válida.
 - Resuelve la fecha con `LocalDate.now(clock.withZone(ZoneId.systemDefault()))`; la zona del navegador no participa en la cuota.
-- Solo cuenta respuestas parseadas y validadas. Incluye interpretaciones con varias intenciones; no cuenta errores, cancelaciones, respuestas inválidas ni transcripciones vacías.
+- Solo cuenta respuestas parseadas y validadas. Incluye interpretaciones con varias intenciones; no cuenta errores, cancelaciones ni respuestas inválidas.
 - Usa `@Lock(PESSIMISTIC_WRITE)` y transacción para evitar carreras.
 - Las operaciones fallidas, canceladas o rechazadas no se registran.
 
@@ -315,12 +315,12 @@ Modificar:
 - `Revisar` deshabilitado si el texto queda vacío, excede el límite, está cargando o, con IA activa, hay etiquetas sin cargar.
 - `Modo manual`.
 - `aria-live` para carga, errores y apertura del consentimiento.
-- En 011b se agrega el micrófono.
+- En móvil/táctil se muestra una pista discreta de dictado nativo; no hay micrófono propio.
 
 `AiConsentDialog`:
 
 - Portal modal con `useModalBehavior`.
-- Aviso versionado que nombra a Groq, indica que se envían texto, audio, zona y etiquetas necesarias, y aclara que el modo manual no envía datos.
+- Aviso versionado que nombra a Groq, indica que se envían texto, zona y etiquetas necesarias, y aclara que el modo manual y el dictado nativo no envían datos por sí mismos.
 - `Aceptar` -> `PUT /users/me/ai-consent` con `GRANTED` y la versión vigente; actualizar perfil; reintentar la acción.
 - `Rechazar` -> `PUT` con `DENIED`; actualizar perfil y abrir modo manual.
 - Cerrar con X, Escape o fondo -> no llamar al endpoint, abrir modo manual solo para ese intento y no modificar el estado: si era `NOT_SET` sigue `NOT_SET`; si era `GRANTED` de una versión anterior sigue `GRANTED` con `aiConsentRequired=true`.
@@ -502,7 +502,7 @@ cd frontend && npm run build
 - Clave de idempotencia reutilizada con datos distintos; se responde 409 y se conserva el texto.
 - Precisión del contador diario ante concurrencia; se usa bloqueo pesimista.
 - Inyección de instrucciones desde el texto; el borrador no ejecuta acciones y el backend valida.
-- Privacidad: el aviso debe nombrar a Groq y cubrir audio, texto, zona y etiquetas; los logs no deben incluir datos personales.
+- Privacidad: el aviso debe nombrar a Groq y cubrir texto, zona y etiquetas; los logs no deben incluir datos personales.
 - Retención y borrado del historial de consentimiento; debe cubrirse con tests de cascada al eliminar la cuenta.
 - Un offset horario como `+03:00` es un `ZoneId` válido en Java pero no una zona IANA; la validación debe rechazarlo y advertir.
 - El fallo de etiquetas y el fallo del proveedor comparten 502; el frontend debe distinguirlos por el estado de `useCaptureTags` o por el `detail` fijo de `TagCatalogUnavailableException` para mostrar `TAGS_UNAVAILABLE`.
@@ -533,7 +533,7 @@ cd frontend && npm run build
 
 ## 10. Fuera de este plan
 
-- Micrófono y transcripción (Spec 011b).
+- Micrófono propio y Whisper; descartados por costo. El dictado nativo móvil se cubre en esta spec (RF-36).
 - MCP, asistente, RAG y documentos (specs posteriores).
 - Búsqueda o edición de notas existentes por lenguaje natural.
 - Reordenamiento o acciones por voz.
